@@ -17,16 +17,19 @@ import { Navbar } from "@/components/layout/Navbar";
 
 const apartments = [
   {
+    id: "monica",
     name: "Monica",
     type: "1 Bedroom Apartment",
     image: "/images/gallery/r3.jpeg",
   },
   {
+    id: "ragnar",
     name: "Ragnar",
     type: "1 Bedroom Apartment",
     image: "/images/gallery/r6.jpeg",
   },
   {
+    id: "alexa",
     name: "Alexa",
     type: "2 Bedroom Apartment",
     image: "/images/gallery/r1.jpeg",
@@ -94,7 +97,7 @@ const experienceSlides = [
 
 export default function HomePage() {
   return (
-    <main className="bg-[#0b0b0a] text-[#f5f1e9]">
+    <main className="min-w-0 w-full overflow-x-hidden bg-[#0b0b0a] text-[#f5f1e9]">
 
       {/* =======================================================
           HERO
@@ -758,233 +761,231 @@ export default function HomePage() {
       ========================================================= */}
 
       <section
+  className="
+    relative
+    z-20
+    overflow-hidden
+    bg-[#0b0b0a]
+    py-20
+    sm:py-28
+    lg:py-36
+  "
+>
+  <div className="mx-auto w-full max-w-[1500px] min-w-0 px-4 sm:px-6 lg:px-10">
+
+    <div
+      className="
+        mb-10
+        flex
+        flex-col
+        justify-between
+        gap-6
+        sm:mb-16
+        sm:gap-8
+        md:flex-row
+        md:items-end
+      "
+    >
+      <div>
+        <p
+          className="
+            text-[8px]
+            font-light
+            uppercase
+            tracking-[0.28em]
+            text-[#c8a96b]
+            sm:text-[10px]
+            sm:tracking-[0.35em]
+          "
+        >
+          The residences
+        </p>
+
+        <h2
+          className="
+            mt-4
+            display
+            text-[clamp(2.8rem,12vw,6rem)]
+            font-light
+            leading-[0.9]
+            tracking-[-0.045em]
+            sm:mt-5
+          "
+        >
+          Choose your space.
+        </h2>
+      </div>
+
+      <Link
+        href="/apartments"
         className="
-          relative
-          z-20
-          bg-[#0b0b0a]
-          py-28
-          lg:py-36
+          group
+          flex
+          w-fit
+          max-w-full
+          items-center
+          gap-3
+          text-[8px]
+          font-light
+          uppercase
+          tracking-[0.18em]
+          text-white/60
+          transition
+          hover:text-white
+          sm:gap-4
+          sm:text-[10px]
+          sm:tracking-[0.25em]
         "
       >
+        View all residences
 
-        <div className="mx-auto max-w-[1500px] px-6 lg:px-10">
+        <ArrowRight
+          size={15}
+          strokeWidth={1}
+          className="
+            transition-transform
+            duration-300
+            group-hover:translate-x-1
+          "
+        />
+      </Link>
+    </div>
 
-          <div
+    <div className="grid min-w-0 gap-4 sm:gap-5 lg:grid-cols-3">
+      {apartments.map((apartment, index) => (
+        <motion.div
+          key={apartment.id}
+          initial={{
+            opacity: 0,
+            y: 25,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+            margin: "-100px",
+          }}
+          transition={{
+            duration: 0.8,
+            delay: index * 0.12,
+          }}
+        >
+          <Link
+            href={`/apartments/${encodeURIComponent(apartment.id)}`}
             className="
-              mb-16
-              flex
-              flex-col
-              justify-between
-              gap-8
-              md:flex-row
-              md:items-end
+              group
+              relative
+              block
+              overflow-hidden
             "
           >
-
-            <div>
-
-              <p
-                className="
-                  text-[10px]
-                  font-light
-                  uppercase
-                  tracking-[0.35em]
-                  text-[#c8a96b]
-                "
-              >
-                The residences
-              </p>
-
-              <h2
-                className="
-                  mt-5
-                  display
-                  text-[clamp(3rem,6vw,6rem)]
-                  font-light
-                  leading-none
-                  tracking-[-0.035em]
-                "
-              >
-                Choose your space.
-              </h2>
-
-            </div>
-
-            <Link
-              href="/apartments"
+            <div
               className="
-                group
-                flex
-                w-fit
-                items-center
-                gap-4
-                text-[10px]
-                font-light
-                uppercase
-                tracking-[0.25em]
-                text-white/60
-                transition
-                hover:text-white
+                relative
+                aspect-[4/5]
+                w-full
+                min-w-0
+                overflow-hidden
+                bg-[#161513]
               "
             >
-              View all residences
-
-              <ArrowRight
-                size={15}
-                strokeWidth={1}
+              <img
+                src={apartment.image}
+                alt={apartment.name}
                 className="
-                  transition-transform
-                  duration-300
-                  group-hover:translate-x-1
+                  h-full
+                  w-full
+                  object-cover
+                  transition
+                  duration-[1.2s]
+                  ease-out
+                  group-hover:scale-105
                 "
               />
-            </Link>
 
-          </div>
+              <div
+                className="
+                  absolute
+                  inset-0
+                  bg-gradient-to-t
+                  from-black/80
+                  via-transparent
+                  to-black/10
+                "
+              />
 
-          <div className="grid gap-5 lg:grid-cols-3">
-
-            {apartments.map((apartment, index) => (
-              <motion.div
-                key={apartment.name}
-                initial={{
-                  opacity: 0,
-                  y: 25,
-                }}
-                whileInView={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                viewport={{
-                  once: true,
-                  margin: "-100px",
-                }}
-                transition={{
-                  duration: 0.8,
-                  delay: index * 0.12,
-                }}
+              <div
+                className="
+                  absolute
+                  inset-x-0
+                  bottom-0
+                  p-5
+                  sm:p-7
+                  lg:p-8
+                "
               >
+                <div className="flex items-end justify-between gap-5">
+                  <div className="min-w-0">
+                    <p
+                      className="
+                        mb-3
+                        text-[9px]
+                        font-light
+                        uppercase
+                        tracking-[0.3em]
+                        text-white/60
+                      "
+                    >
+                      {apartment.type}
+                    </p>
 
-                <Link
-                  href="/apartments"
-                  className="
-                    group
-                    relative
-                    block
-                    overflow-hidden
-                  "
-                >
+                    <h3
+                      className="
+                        display
+                        text-4xl
+                        font-light
+                        text-white
+                      "
+                    >
+                      {apartment.name}
+                    </h3>
+                  </div>
 
                   <div
                     className="
-                      relative
-                      aspect-[4/5]
-                      overflow-hidden
-                      bg-[#161513]
+                      flex
+                      h-11
+                      w-11
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      border
+                      border-white/30
+                      text-white
+                      transition-all
+                      duration-300
+                      group-hover:border-white
+                      group-hover:bg-white
+                      group-hover:text-black
                     "
                   >
-
-                    <img
-                      src={apartment.image}
-                      alt={apartment.name}
-                      className="
-                        h-full
-                        w-full
-                        object-cover
-                        transition
-                        duration-[1.2s]
-                        ease-out
-                        group-hover:scale-105
-                      "
+                    <ArrowRight
+                      size={15}
+                      strokeWidth={1}
                     />
-
-                    <div
-                      className="
-                        absolute
-                        inset-0
-                        bg-gradient-to-t
-                        from-black/80
-                        via-transparent
-                        to-black/10
-                      "
-                    />
-
-                    <div
-                      className="
-                        absolute
-                        inset-x-0
-                        bottom-0
-                        p-7
-                        lg:p-8
-                      "
-                    >
-
-                      <div className="flex items-end justify-between">
-
-                        <div>
-
-                          <p
-                            className="
-                              mb-3
-                              text-[9px]
-                              font-light
-                              uppercase
-                              tracking-[0.3em]
-                              text-white/60
-                            "
-                          >
-                            {apartment.type}
-                          </p>
-
-                          <h3
-                            className="
-                              display
-                              text-4xl
-                              font-light
-                            "
-                          >
-                            {apartment.name}
-                          </h3>
-
-                        </div>
-
-                        <div
-                          className="
-                            flex
-                            h-11
-                            w-11
-                            items-center
-                            justify-center
-                            rounded-full
-                            border
-                            border-white/30
-                            transition-all
-                            duration-300
-                            group-hover:border-white
-                            group-hover:bg-white
-                            group-hover:text-black
-                          "
-                        >
-                          <ArrowRight
-                            size={15}
-                            strokeWidth={1}
-                          />
-                        </div>
-
-                      </div>
-
-                    </div>
-
                   </div>
-
-                </Link>
-
-              </motion.div>
-            ))}
-
-          </div>
-        </div>
-      </section>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* =========================================================
           LIFESTYLE / EXPERIENCE
@@ -1000,7 +1001,7 @@ export default function HomePage() {
         "
       >
 
-        <div className="mx-auto max-w-[1500px] px-6 lg:px-10">
+        <div className="mx-auto w-full max-w-[1500px] min-w-0 px-4 sm:px-6 lg:px-10">
 
           <div
             className="
@@ -1239,7 +1240,7 @@ export default function HomePage() {
         "
       >
 
-        <div className="mx-auto max-w-[1500px] px-6 lg:px-10">
+        <div className="mx-auto w-full max-w-[1500px] min-w-0 px-4 sm:px-6 lg:px-10">
 
           <div
             className="
@@ -1542,7 +1543,7 @@ export default function HomePage() {
           "
         />
 
-        <div className="relative z-10 px-6 text-center">
+        <div className="relative z-10 w-full max-w-full px-4 text-center sm:px-6">
 
           <motion.p
             initial={{
@@ -1589,7 +1590,7 @@ export default function HomePage() {
             className="
               mt-6
               display
-              text-[clamp(4rem,9vw,9rem)]
+              text-[clamp(3.4rem,15vw,9rem)]
               font-light
               leading-[0.85]
               tracking-[-0.045em]
@@ -1740,10 +1741,10 @@ function ExperienceSlideshow() {
       <div
         className="
           relative
-          min-h-[680px]
+          min-h-[520px]
           overflow-hidden
           bg-[#161513]
-          sm:min-h-[720px]
+          sm:min-h-[620px]
           lg:min-h-[760px]
         "
       >
@@ -1890,8 +1891,8 @@ function ExperienceSlideshow() {
 
           <div
             className="
-              px-6
-              pb-28
+              px-4
+              pb-24
               sm:px-10
               sm:pb-32
               lg:px-12
@@ -1932,7 +1933,7 @@ function ExperienceSlideshow() {
               <h3
                 className="
                   display
-                  text-[clamp(3.5rem,7vw,7.5rem)]
+                  text-[clamp(3rem,13vw,7.5rem)]
                   font-light
                   leading-[0.84]
                   tracking-[-0.05em]
@@ -1973,11 +1974,12 @@ function ExperienceSlideshow() {
         <div
           className="
             absolute
-            inset-x-6
-            bottom-6
+            inset-x-4
+            bottom-4
             flex
             items-center
             justify-between
+            gap-4
             sm:inset-x-10
             sm:bottom-8
             lg:inset-x-12
@@ -1985,7 +1987,7 @@ function ExperienceSlideshow() {
         >
 
           {/* Progress */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
 
             {experienceSlides.map((item, index) => (
               <button
