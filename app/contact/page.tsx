@@ -58,22 +58,7 @@ export default function ContactPage() {
       {/* =========================================================
           HEADER
       ========================================================= */}
-      <header className="absolute left-0 right-0 top-0 z-30 border-b border-white/10 bg-black/10 text-white backdrop-blur-md">
-        <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
-          <Link
-            href="/"
-            className="display text-2xl font-light tracking-[-0.05em]"
-          >
-            RAHAT
-          </Link>
-
-          <div className="flex items-center gap-2 text-[8px] uppercase tracking-[0.2em] text-white/45">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#d5b270]" />
-            Private concierge
-          </div>
-        </div>
-      </header>
-
+      
       {/* =========================================================
           HERO
       ========================================================= */}
