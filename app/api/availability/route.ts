@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {apartments,isAvailable} from '@/lib/data';
+export async function GET(req:Request){const u=new URL(req.url),checkIn=u.searchParams.get('checkIn'),checkOut=u.searchParams.get('checkOut'),guests=Number(u.searchParams.get('guests')||2);if(!checkIn||!checkOut)return NextResponse.json({error:'checkIn and checkOut are required'},{status:400});return NextResponse.json({checkIn,checkOut,guests,apartments:apartments.filter(a=>a.capacity>=guests&&isAvailable(a.slug,checkIn,checkOut))})}

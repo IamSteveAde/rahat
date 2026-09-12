@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold-900: #8A6E3F;
+  --gold-700: #B79861;
+  --gold-500: #D5B270;
+  --gold-400: #DFC276;
+  --gold-300: #E8D37A;
+  --gold-200: #F5E681;
+  --gold-100: #FFF488;
+  --black: #0A0A0A;
+  --off-white: #F7F7F5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--off-white);
+  color: var(--black);
+  font-family: var(--font-jakarta), sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Rahat editorial typography */
+.display {
+  font-family: var(--font-fraunces), serif;
+  font-weight: 300;
+  font-style: normal;
+  letter-spacing: -0.025em;
+}
+
+.luxury-grid {
+  background-image:
+    linear-gradient(
+      rgba(10, 10, 10, 0.035) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(10, 10, 10, 0.035) 1px,
+      transparent 1px
+    );
+  background-size: 36px 36px;
+}
+
+.goldline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--gold-500),
+    transparent
+  );
+}

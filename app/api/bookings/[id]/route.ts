@@ -1,0 +1,1 @@
+import {NextResponse} from 'next/server';import {demoBookings} from '@/lib/data';export async function GET(_:Request,{params}:{params:{id:string}}){const b=demoBookings.find(x=>x.id===params.id||x.reference===params.id);return b?NextResponse.json(b):NextResponse.json({error:'Booking not found'},{status:404})}
