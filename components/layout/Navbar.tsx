@@ -11,7 +11,7 @@ import {
 
 const navigation = [
   {
-    label: "Stay",
+    label: "Book Stay",
     href: "/apartments",
     description: "Explore our private residences",
   },
@@ -214,7 +214,7 @@ export function Navbar() {
             >
               <DesktopNavItem
                 href="/apartments"
-                label="Book Apartment"
+                label="Book Stay"
               />
 
               <DesktopNavItem

@@ -346,7 +346,7 @@ export default function HomePage() {
               >
 
                 <Link
-                  href="/booking"
+                  href="/apartments"
                   className="
                     group
                     inline-flex
