@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
 const COOKIE_NAME = "rahat_admin_session";
 
@@ -6,9 +7,7 @@ function getSecret() {
   const secret = process.env.ADMIN_SESSION_SECRET;
 
   if (!secret) {
-    throw new Error(
-      "ADMIN_SESSION_SECRET is not configured.",
-    );
+    throw new Error("ADMIN_SESSION_SECRET is not configured.");
   }
 
   return new TextEncoder().encode(secret);
@@ -43,6 +42,13 @@ export async function verifyAdminSession(
   } catch {
     return false;
   }
+}
+
+export async function isAdminRequest() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  return verifyAdminSession(token);
 }
 
 export function getAdminCookieName() {
