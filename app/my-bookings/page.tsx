@@ -1,22 +1,32 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { createHash } from "crypto";
+import { Prisma } from "@prisma/client";
 import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
-  Clock3,
   ExternalLink,
   MapPin,
   MessageCircle,
   Sparkles,
 } from "lucide-react";
-import { demoBookings, formatNaira, getApartment } from "@/lib/data";
+import { prisma } from "@/lib/prisma";
 
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
+const GUEST_BOOKING_COOKIE = "rahat_guest_booking";
+
+function hashGuestAccessToken(token: string) {
+  return createHash("sha256")
+    .update(token)
+    .digest("hex");
+}
+
+function formatDate(value: Date | string) {
+  const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return value;
+    return String(value);
   }
 
   return date.toLocaleDateString("en-NG", {
@@ -26,55 +36,146 @@ function formatDate(value: string) {
   });
 }
 
-function getNights(checkIn: string, checkOut: string) {
-  const start = new Date(`${checkIn}T00:00:00`);
-  const end = new Date(`${checkOut}T00:00:00`);
+function getNights(
+  checkIn: Date | string,
+  checkOut: Date | string,
+) {
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
 
   return Math.max(
     1,
-    Math.round((end.getTime() - start.getTime()) / 86400000),
+    Math.round(
+      (end.getTime() - start.getTime()) /
+        86400000,
+    ),
   );
+}
+
+function formatNaira(amount: number) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatStatus(status: string) {
+  switch (status) {
+    case "CONFIRMED":
+      return "Confirmed";
+    case "PENDING":
+      return "Pending";
+    case "CHECKED_IN":
+      return "Checked In";
+    case "COMPLETED":
+      return "Completed";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return status;
+  }
 }
 
 function statusClasses(status: string) {
   switch (status) {
-    case "Confirmed":
+    case "CONFIRMED":
       return "bg-[#e8dfc9] text-[#6f592f]";
-    case "Pending":
+
+    case "PENDING":
       return "bg-[#eeeae1] text-black/55";
-    case "Checked In":
+
+    case "CHECKED_IN":
       return "bg-black text-white";
-    case "Completed":
+
+    case "COMPLETED":
       return "bg-black/[0.06] text-black/50";
-    case "Cancelled":
+
+    case "CANCELLED":
       return "bg-red-50 text-red-700";
+
     default:
       return "bg-black/[0.06] text-black/50";
   }
 }
 
-export default function MyBookings() {
-  const upcomingBookings = demoBookings.filter(
-    (booking) =>
-      booking.bookingStatus !== "Cancelled" &&
-      booking.bookingStatus !== "Completed",
-  );
+export default async function MyBookings() {
+  const cookieStore = await cookies();
 
-  const pastBookings = demoBookings.filter(
-    (booking) =>
-      booking.bookingStatus === "Completed" ||
-      booking.bookingStatus === "Cancelled",
-  );
+  const guestAccessToken =
+    cookieStore.get(
+      GUEST_BOOKING_COOKIE,
+    )?.value;
+
+  type BookingWithDetails =
+  Prisma.BookingGetPayload<{
+    include: {
+      apartment: {
+        include: {
+          images: true;
+        };
+      };
+      payments: true;
+    };
+  }>;
+
+let bookings: BookingWithDetails[] = [];
+
+  /*
+   * Only bookings belonging to the private
+   * guest access token are returned.
+   */
+  if (guestAccessToken) {
+    const guestAccessTokenHash =
+      hashGuestAccessToken(
+        guestAccessToken,
+      );
+
+    bookings =
+      await prisma.booking.findMany({
+        where: {
+          guestAccessTokenHash,
+        },
+
+        include: {
+          apartment: {
+            include: {
+              images: true,
+            },
+          },
+          payments: true,
+        },
+
+        orderBy: {
+          checkIn: "desc",
+        },
+      });
+  }
+
+  const upcomingBookings =
+    bookings.filter(
+      (booking) =>
+        booking.bookingStatus !==
+          "CANCELLED" &&
+        booking.bookingStatus !==
+          "COMPLETED",
+    );
+
+  const pastBookings =
+    bookings.filter(
+      (booking) =>
+        booking.bookingStatus ===
+          "COMPLETED" ||
+        booking.bookingStatus ===
+          "CANCELLED",
+    );
 
   return (
     <main className="min-h-screen bg-[#f5f3ee] text-[#0b0b0b]">
       {/* =========================================================
-          HEADER
-      ========================================================= */}
-      
-      {/* =========================================================
           HERO
       ========================================================= */}
+
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
           <img
@@ -105,8 +206,8 @@ export default function MyBookings() {
                 </h1>
 
                 <p className="mt-7 max-w-xl text-sm leading-7 text-white/50 sm:text-base">
-                  Everything you need for your Rahat stays, brought together
-                  in one place.
+                  Everything you need for your Rahat
+                  stays, brought together in one place.
                 </p>
               </div>
 
@@ -125,8 +226,10 @@ export default function MyBookings() {
                   </p>
 
                   <p className="mt-1 text-sm text-white/75">
-                    {demoBookings.length}{" "}
-                    {demoBookings.length === 1 ? "stay" : "stays"}
+                    {bookings.length}{" "}
+                    {bookings.length === 1
+                      ? "stay"
+                      : "stays"}
                   </p>
                 </div>
               </div>
@@ -138,10 +241,12 @@ export default function MyBookings() {
       {/* =========================================================
           CONTENT
       ========================================================= */}
+
       <div className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
         {/* =======================================================
             UPCOMING
         ======================================================= */}
+
         <section>
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
@@ -159,6 +264,7 @@ export default function MyBookings() {
               className="group inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-black/45 transition hover:text-black"
             >
               Find another stay
+
               <ArrowRight
                 size={13}
                 className="transition-transform group-hover:translate-x-1"
@@ -168,191 +274,226 @@ export default function MyBookings() {
 
           {upcomingBookings.length > 0 ? (
             <div className="mt-10 space-y-5">
-              {upcomingBookings.map((booking, index) => {
-                const apartment = getApartment(booking.apartmentSlug);
-                const nights = getNights(
-                  booking.checkIn,
-                  booking.checkOut,
-                );
+              {upcomingBookings.map(
+                (booking, index) => {
+                  const nights = getNights(
+                    booking.checkIn,
+                    booking.checkOut,
+                  );
 
-                return (
-                  <article
-                    key={booking.id}
-                    className="group overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-black/[0.045]"
-                  >
-                    <div className="grid lg:grid-cols-[360px_minmax(0,1fr)]">
-                      {/* Image */}
-                      <div className="relative min-h-[280px] overflow-hidden bg-[#ddd8cd] lg:min-h-[100%]">
-                        <img
-                          src="/images/gallery/r1.jpeg"
-                          alt={booking.apartmentName}
-                          className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                        />
+                  const apartmentImage =
+                    booking.apartment.images?.[0]
+                      ?.url ||
+                    "/images/gallery/r1.jpeg";
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                  return (
+                    <article
+                      key={booking.id}
+                      className="group overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-black/[0.045]"
+                    >
+                      <div className="grid lg:grid-cols-[360px_minmax(0,1fr)]">
+                        {/* Image */}
 
-                        <div className="absolute left-5 top-5">
-                          <span
-                            className={`rounded-full px-3 py-2 text-[7px] uppercase tracking-[0.17em] ${statusClasses(
-                              booking.bookingStatus,
-                            )}`}
-                          >
-                            {booking.bookingStatus}
-                          </span>
-                        </div>
+                        <div className="relative min-h-[280px] overflow-hidden bg-[#ddd8cd] lg:min-h-[100%]">
+                          <img
+                            src={apartmentImage}
+                            alt={
+                              booking.apartment.name
+                            }
+                            className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                          />
 
-                        <div className="absolute bottom-5 left-5 right-5">
-                          <p className="text-[8px] uppercase tracking-[0.22em] text-white/50">
-                            Residence {String(index + 1).padStart(2, "0")}
-                          </p>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
 
-                          <h3 className="display mt-1 text-3xl font-light tracking-[-0.045em] text-white">
-                            {booking.apartmentName}
-                          </h3>
-                        </div>
-                      </div>
+                          <div className="absolute left-5 top-5">
+                            <span
+                              className={`rounded-full px-3 py-2 text-[7px] uppercase tracking-[0.17em] ${statusClasses(
+                                booking.bookingStatus,
+                              )}`}
+                            >
+                              {formatStatus(
+                                booking.bookingStatus,
+                              )}
+                            </span>
+                          </div>
 
-                      {/* Details */}
-                      <div className="p-6 sm:p-8 lg:p-10">
-                        <div className="flex flex-col justify-between gap-8 xl:flex-row">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-3">
-                              <p className="text-[8px] uppercase tracking-[0.22em] text-[#8a6e3f]">
-                                {booking.apartmentName}
-                              </p>
+                          <div className="absolute bottom-5 left-5 right-5">
+                            <p className="text-[8px] uppercase tracking-[0.22em] text-white/50">
+                              Residence{" "}
+                              {String(index + 1).padStart(
+                                2,
+                                "0",
+                              )}
+                            </p>
 
-                              <span className="h-1 w-1 rounded-full bg-black/15" />
-
-                              <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                                {apartment?.type || "Luxury apartment"}
-                              </p>
-                            </div>
-
-                            <h3 className="display mt-3 text-3xl font-light tracking-[-0.045em] sm:text-4xl">
-                              {formatDate(booking.checkIn)}
+                            <h3 className="display mt-1 text-3xl font-light tracking-[-0.045em] text-white">
+                              {booking.apartment.name}
                             </h3>
-
-                            <p className="mt-1 text-sm text-black/35">
-                              to {formatDate(booking.checkOut)}
-                            </p>
-                          </div>
-
-                          <div className="xl:text-right">
-                            <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                              Total
-                            </p>
-
-                            <p className="mt-2 text-2xl font-medium tracking-[-0.035em]">
-                              {formatNaira(booking.total)}
-                            </p>
-
-                            <p className="mt-1 text-[8px] uppercase tracking-[0.15em] text-black/30">
-                              {nights}{" "}
-                              {nights === 1 ? "night" : "nights"}
-                            </p>
                           </div>
                         </div>
 
-                        <div className="my-8 h-px bg-black/[0.07]" />
+                        {/* Details */}
 
-                        {/* Booking metadata */}
-                        <div className="grid gap-6 sm:grid-cols-3">
-                          <div className="flex gap-3">
-                            <CalendarDays
-                              size={17}
-                              strokeWidth={1.3}
-                              className="shrink-0 text-[#8a6e3f]"
-                            />
-
+                        <div className="p-6 sm:p-8 lg:p-10">
+                          <div className="flex flex-col justify-between gap-8 xl:flex-row">
                             <div>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <p className="text-[8px] uppercase tracking-[0.22em] text-[#8a6e3f]">
+                                  {booking.apartment.name}
+                                </p>
+
+                                <span className="h-1 w-1 rounded-full bg-black/15" />
+
+                                <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                                  {booking.apartment.type ||
+                                    "Luxury apartment"}
+                                </p>
+                              </div>
+
+                              <h3 className="display mt-3 text-3xl font-light tracking-[-0.045em] sm:text-4xl">
+                                {formatDate(
+                                  booking.checkIn,
+                                )}
+                              </h3>
+
+                              <p className="mt-1 text-sm text-black/35">
+                                to{" "}
+                                {formatDate(
+                                  booking.checkOut,
+                                )}
+                              </p>
+                            </div>
+
+                            <div className="xl:text-right">
                               <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                                Stay
+                                Total
                               </p>
 
-                              <p className="mt-1 text-xs">
+                              <p className="mt-2 text-2xl font-medium tracking-[-0.035em]">
+                                {formatNaira(
+                                  booking.total,
+                                )}
+                              </p>
+
+                              <p className="mt-1 text-[8px] uppercase tracking-[0.15em] text-black/30">
                                 {nights}{" "}
-                                {nights === 1 ? "night" : "nights"}
+                                {nights === 1
+                                  ? "night"
+                                  : "nights"}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex gap-3">
-                            <MapPin
-                              size={17}
-                              strokeWidth={1.3}
-                              className="shrink-0 text-[#8a6e3f]"
-                            />
+                          <div className="my-8 h-px bg-black/[0.07]" />
 
-                            <div>
-                              <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                                Location
-                              </p>
+                          {/* Booking metadata */}
 
-                              <p className="mt-1 text-xs">
-                                Ikota GRA, Lagos
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3">
-                            <CheckCircle2
-                              size={17}
-                              strokeWidth={1.3}
-                              className="shrink-0 text-[#8a6e3f]"
-                            />
-
-                            <div>
-                              <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                                Payment
-                              </p>
-
-                              <p className="mt-1 text-xs">
-                                {booking.paymentStatus}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Bottom actions */}
-                        <div className="mt-8 flex flex-col gap-3 border-t border-black/[0.07] pt-7 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-[7px] uppercase tracking-[0.18em] text-black/25">
-                              Confirmation
-                            </p>
-
-                            <p className="mt-1 font-mono text-[10px] tracking-[0.07em] text-black/50">
-                              {booking.reference}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <Link
-                              href={`/confirmation/${booking.id}?apartment=${booking.apartmentSlug}&checkIn=${booking.checkIn}&checkOut=${booking.checkOut}&guests=${booking.guests}`}
-                              className="group inline-flex items-center justify-center gap-3 rounded-full bg-black px-6 py-3.5 text-[8px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8a6e3f]"
-                            >
-                              View reservation
-                              <ArrowRight
-                                size={13}
-                                className="transition-transform group-hover:translate-x-1"
+                          <div className="grid gap-6 sm:grid-cols-3">
+                            <div className="flex gap-3">
+                              <CalendarDays
+                                size={17}
+                                strokeWidth={1.3}
+                                className="shrink-0 text-[#8a6e3f]"
                               />
-                            </Link>
 
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=1%20Begonia%20Avenue%2C%20Ikota%20GRA%2C%20Lagos`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3.5 text-[8px] uppercase tracking-[0.18em] text-black/55 transition hover:border-black/20 hover:text-black"
-                            >
-                              <MapPin size={13} />
-                              Directions
-                            </a>
+                              <div>
+                                <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                                  Stay
+                                </p>
+
+                                <p className="mt-1 text-xs">
+                                  {nights}{" "}
+                                  {nights === 1
+                                    ? "night"
+                                    : "nights"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                              <MapPin
+                                size={17}
+                                strokeWidth={1.3}
+                                className="shrink-0 text-[#8a6e3f]"
+                              />
+
+                              <div>
+                                <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                                  Location
+                                </p>
+
+                                <p className="mt-1 text-xs">
+                                  Ikota GRA, Lagos
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                              <CheckCircle2
+                                size={17}
+                                strokeWidth={1.3}
+                                className="shrink-0 text-[#8a6e3f]"
+                              />
+
+                              <div>
+                                <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                                  Payment
+                                </p>
+
+                                <p className="mt-1 text-xs">
+                                  {booking.paymentStatus}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bottom actions */}
+
+                          <div className="mt-8 flex flex-col gap-3 border-t border-black/[0.07] pt-7 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-[7px] uppercase tracking-[0.18em] text-black/25">
+                                Confirmation
+                              </p>
+
+                              <p className="mt-1 font-mono text-[10px] tracking-[0.07em] text-black/50">
+                                {
+                                  booking.bookingReference
+                                }
+                              </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <Link
+                                href={`/confirmation/${booking.id}`}
+                                className="group inline-flex items-center justify-center gap-3 rounded-full bg-black px-6 py-3.5 text-[8px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8a6e3f]"
+                              >
+                                View reservation
+
+                                <ArrowRight
+                                  size={13}
+                                  className="transition-transform group-hover:translate-x-1"
+                                />
+                              </Link>
+
+                              <a
+                                href="https://www.google.com/maps/search/?api=1&query=1%20Begonia%20Avenue%2C%20Ikota%20GRA%2C%20Lagos"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-5 py-3.5 text-[8px] uppercase tracking-[0.18em] text-black/55 transition hover:border-black/20 hover:text-black"
+                              >
+                                <MapPin
+                                  size={13}
+                                />
+                                Directions
+                              </a>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
+                    </article>
+                  );
+                },
+              )}
             </div>
           ) : (
             <div className="mt-10 rounded-[1.75rem] bg-white p-10 text-center ring-1 ring-black/[0.045] sm:p-16">
@@ -369,8 +510,8 @@ export default function MyBookings() {
               </h3>
 
               <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-black/40">
-                Find a residence that feels right and begin your next Rahat
-                stay.
+                Find a residence that feels right and
+                begin your next Rahat stay.
               </p>
 
               <Link
@@ -387,6 +528,7 @@ export default function MyBookings() {
         {/* =======================================================
             QUICK SERVICES
         ======================================================= */}
+
         <section className="mt-20 border-t border-black/[0.07] pt-16 sm:mt-24 sm:pt-20">
           <div className="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:items-end">
             <div>
@@ -483,6 +625,7 @@ export default function MyBookings() {
         {/* =======================================================
             PAST STAYS
         ======================================================= */}
+
         {pastBookings.length > 0 && (
           <section className="mt-20 border-t border-black/[0.07] pt-16 sm:mt-24 sm:pt-20">
             <div>
@@ -496,50 +639,62 @@ export default function MyBookings() {
             </div>
 
             <div className="mt-7 space-y-3">
-              {pastBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex flex-col justify-between gap-5 rounded-2xl bg-white p-5 ring-1 ring-black/[0.04] sm:flex-row sm:items-center"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="display text-2xl font-light">
-                        {booking.apartmentName}
-                      </h3>
+              {pastBookings.map(
+                (booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex flex-col justify-between gap-5 rounded-2xl bg-white p-5 ring-1 ring-black/[0.04] sm:flex-row sm:items-center"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="display text-2xl font-light">
+                          {booking.apartment.name}
+                        </h3>
 
-                      <span
-                        className={`rounded-full px-3 py-1.5 text-[7px] uppercase tracking-[0.15em] ${statusClasses(
-                          booking.bookingStatus,
-                        )}`}
-                      >
-                        {booking.bookingStatus}
-                      </span>
+                        <span
+                          className={`rounded-full px-3 py-1.5 text-[7px] uppercase tracking-[0.15em] ${statusClasses(
+                            booking.bookingStatus,
+                          )}`}
+                        >
+                          {formatStatus(
+                            booking.bookingStatus,
+                          )}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-xs text-black/35">
+                        {formatDate(
+                          booking.checkIn,
+                        )}{" "}
+                        —{" "}
+                        {formatDate(
+                          booking.checkOut,
+                        )}
+                      </p>
                     </div>
 
-                    <p className="mt-1 text-xs text-black/35">
-                      {formatDate(booking.checkIn)} —{" "}
-                      {formatDate(booking.checkOut)}
-                    </p>
-                  </div>
+                    <div className="flex items-center justify-between gap-8 sm:justify-end">
+                      <p className="text-sm font-medium">
+                        {formatNaira(
+                          booking.total,
+                        )}
+                      </p>
 
-                  <div className="flex items-center justify-between gap-8 sm:justify-end">
-                    <p className="text-sm font-medium">
-                      {formatNaira(booking.total)}
-                    </p>
+                      <Link
+                        href={`/confirmation/${booking.id}`}
+                        className="group flex items-center gap-2 text-[8px] uppercase tracking-[0.17em] text-black/40 hover:text-black"
+                      >
+                        View
 
-                    <Link
-                      href={`/confirmation/${booking.id}?apartment=${booking.apartmentSlug}&checkIn=${booking.checkIn}&checkOut=${booking.checkOut}&guests=${booking.guests}`}
-                      className="group flex items-center gap-2 text-[8px] uppercase tracking-[0.17em] text-black/40 hover:text-black"
-                    >
-                      View
-                      <ChevronRight
-                        size={14}
-                        className="transition-transform group-hover:translate-x-1"
-                      />
-                    </Link>
+                        <ChevronRight
+                          size={14}
+                          className="transition-transform group-hover:translate-x-1"
+                        />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </section>
         )}
@@ -548,6 +703,7 @@ export default function MyBookings() {
       {/* =========================================================
           FINAL CTA
       ========================================================= */}
+
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
           <img
@@ -578,6 +734,7 @@ export default function MyBookings() {
                 className="group inline-flex items-center gap-3 rounded-full bg-white px-6 py-3.5 text-[9px] uppercase tracking-[0.18em] text-black transition hover:bg-[#d5b270]"
               >
                 Explore residences
+
                 <ArrowRight
                   size={14}
                   className="transition-transform group-hover:translate-x-1"
@@ -599,6 +756,7 @@ export default function MyBookings() {
       {/* =========================================================
           FOOTER
       ========================================================= */}
+
       <footer className="bg-black text-white">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-4 border-t border-white/10 px-5 py-8 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
           <p className="display text-xl font-light tracking-[-0.04em]">

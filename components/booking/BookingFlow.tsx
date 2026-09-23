@@ -5,7 +5,11 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,13 +24,17 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
+
 import {
   apartments,
   getApartment,
   formatNaira,
-  isAvailable,
 } from "@/lib/data";
-import { calculatePrice, validateBooking } from "@/lib/booking";
+
+import {
+  calculatePrice,
+  validateBooking,
+} from "@/lib/booking";
 
 type Step = 1 | 2 | 3;
 
@@ -41,6 +49,7 @@ export function BookingFlow() {
   const router = useRouter();
 
   const apartmentParam = params.get("apartment");
+
   const initialApartment =
     (apartmentParam && getApartment(apartmentParam)?.slug) ||
     apartments[0]?.slug ||
@@ -49,24 +58,24 @@ export function BookingFlow() {
   const selectedFromResidence = Boolean(apartmentParam);
 
   function formatLocalDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
-  return `${year}-${month}-${day}`;
-}
+    return `${year}-${month}-${day}`;
+  }
 
-const now = new Date();
+  const now = new Date();
 
-const today = formatLocalDate(now);
+  const today = formatLocalDate(now);
 
-const tomorrow = new Date(now);
-tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
-const tomorrowString = formatLocalDate(tomorrow);
+  const tomorrowString = formatLocalDate(tomorrow);
+
   const [aSlug] = useState(initialApartment);
-  // Start bookings tomorrow by default. This avoids preselecting a date that
-  // may already be occupied and keeps the default experience friction-free.
+
   const [checkIn, setCheckIn] = useState(
     params.get("checkIn") || tomorrowString,
   );
@@ -77,6 +86,7 @@ const tomorrowString = formatLocalDate(tomorrow);
   const [checkOut, setCheckOut] = useState(
     params.get("checkOut") || formatLocalDate(defaultCheckOut),
   );
+
   const [guests, setGuests] = useState(
     Number(params.get("guests") || 2),
   );
@@ -90,19 +100,182 @@ const tomorrowString = formatLocalDate(tomorrow);
   const [special, setSpecial] = useState("");
 
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  type AvailabilityStatus =
+    | "idle"
+    | "checking"
+    | "available"
+    | "unavailable"
+    | "error";
+
+  const [availabilityStatus, setAvailabilityStatus] =
+    useState<AvailabilityStatus>("idle");
+
+  const [availabilityMessage, setAvailabilityMessage] = useState("");
+
+  const [unavailableFrom, setUnavailableFrom] =
+    useState<string | null>(null);
+
+  const [unavailableTo, setUnavailableTo] =
+    useState<string | null>(null);
+
+  const [conflictType, setConflictType] =
+    useState<string | null>(null);
 
   const apt = getApartment(aSlug);
+
 
   if (!apt) {
     return null;
   }
 
-  const price = useMemo(
-    () => calculatePrice(aSlug, checkIn, checkOut),
-    [aSlug, checkIn, checkOut],
-  );
+  const price = useMemo(() => {
+    if (!checkIn || !checkOut || checkIn >= checkOut) {
+      return null;
+    }
 
-  const nights = price.nights;
+    try {
+      return calculatePrice(aSlug, checkIn, checkOut);
+    } catch {
+      return null;
+    }
+  }, [aSlug, checkIn, checkOut]);
+
+  const nights = price?.nights ?? 0;
+
+  /*
+   * =========================================================
+   * AVAILABILITY CHECK
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (
+      !checkIn ||
+      !checkOut ||
+      !guests ||
+      checkIn >= checkOut
+    ) {
+      setAvailabilityStatus("idle");
+      setAvailabilityMessage("");
+      setUnavailableFrom(null);
+      setUnavailableTo(null);
+      setConflictType(null);
+      return;
+    }
+
+    if (checkIn >= checkOut) {
+      setAvailabilityStatus("error");
+      setAvailabilityMessage(
+        "Check-out must be after check-in.",
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const checkAvailability = async () => {
+      setAvailabilityStatus("checking");
+      setAvailabilityMessage("");
+      setUnavailableFrom(null);
+      setUnavailableTo(null);
+      setConflictType(null);
+
+      try {
+        const response = await fetch(
+          `/api/availability?apartment=${encodeURIComponent(
+            aSlug,
+          )}&checkIn=${encodeURIComponent(
+            checkIn,
+          )}&checkOut=${encodeURIComponent(
+            checkOut,
+          )}&guests=${encodeURIComponent(String(guests))}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Unable to check availability.",
+          );
+        }
+
+        if (data?.available) {
+          setAvailabilityStatus("available");
+
+          setAvailabilityMessage(
+            "This residence is available for your selected dates.",
+          );
+
+          setUnavailableFrom(null);
+          setUnavailableTo(null);
+          setConflictType(null);
+        } else {
+          setAvailabilityStatus("unavailable");
+
+          setAvailabilityMessage(
+            data?.reason ||
+              "This residence is unavailable for the selected dates.",
+          );
+
+          setUnavailableFrom(
+            data?.unavailableFrom || null,
+          );
+
+          setUnavailableTo(
+            data?.unavailableTo || null,
+          );
+
+          setConflictType(
+            data?.conflictType || null,
+          );
+        }
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        setAvailabilityStatus("error");
+
+        setAvailabilityMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to check availability.",
+        );
+
+        setUnavailableFrom(null);
+        setUnavailableTo(null);
+        setConflictType(null);
+      }
+    };
+
+    const timeout = window.setTimeout(
+      checkAvailability,
+      150,
+    );
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [aSlug, checkIn, checkOut, guests]);
+
+
+  /*
+   * =========================================================
+   * GUEST VALIDATION
+   * =========================================================
+   */
 
   function validateGuestDetails() {
     if (!name.trim()) {
@@ -113,7 +286,11 @@ const tomorrowString = formatLocalDate(tomorrow);
       return "Please enter your email address.";
     }
 
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+    if (
+      !/^\S+@\S+\.\S+$/.test(
+        email.trim(),
+      )
+    ) {
       return "Please enter a valid email address.";
     }
 
@@ -124,9 +301,22 @@ const tomorrowString = formatLocalDate(tomorrow);
     return "";
   }
 
+  /*
+   * =========================================================
+   * NEXT / BOOKING CREATION / PAYSTACK
+   * =========================================================
+   */
+
   async function next() {
+    if (submitting) {
+      return;
+    }
+
     setError("");
 
+    /*
+     * STEP 1
+     */
     if (step === 1) {
       const bookingError = validateBooking(
         aSlug,
@@ -140,12 +330,39 @@ const tomorrowString = formatLocalDate(tomorrow);
         return;
       }
 
+      if (
+        availabilityStatus ===
+        "checking"
+      ) {
+        setError(
+          "We're still checking these dates. Please wait a moment.",
+        );
+
+        return;
+      }
+
+      if (
+        availabilityStatus !==
+        "available"
+      ) {
+        setError(
+          availabilityMessage ||
+            "This residence is unavailable for the selected dates.",
+        );
+
+        return;
+      }
+
       setStep(2);
       return;
     }
 
+    /*
+     * STEP 2
+     */
     if (step === 2) {
-      const guestError = validateGuestDetails();
+      const guestError =
+        validateGuestDetails();
 
       if (guestError) {
         setError(guestError);
@@ -156,6 +373,17 @@ const tomorrowString = formatLocalDate(tomorrow);
       return;
     }
 
+    /*
+     * STEP 3
+     *
+     * Create the booking first.
+     *
+     * IMPORTANT:
+     * No date hold is created here.
+     *
+     * The booking is only confirmed after Paystack
+     * payment is successfully verified server-side.
+     */
     const bookingError = validateBooking(
       aSlug,
       checkIn,
@@ -169,7 +397,8 @@ const tomorrowString = formatLocalDate(tomorrow);
       return;
     }
 
-    const guestError = validateGuestDetails();
+    const guestError =
+      validateGuestDetails();
 
     if (guestError) {
       setError(guestError);
@@ -177,56 +406,281 @@ const tomorrowString = formatLocalDate(tomorrow);
       return;
     }
 
-    router.push(
-      `/confirmation/demo-${aSlug}-${checkIn}?apartment=${aSlug}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}&name=${encodeURIComponent(
-        name,
-      )}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(
-        phone,
-      )}`,
+    try {
+      setSubmitting(true);
+
+      /*
+       * Resolve the database apartment ID from the
+       * frontend apartment slug.
+       */
+      const apartmentsResponse =
+        await fetch("/api/apartments", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+      const apartmentsData =
+        await apartmentsResponse.json();
+
+      if (!apartmentsResponse.ok) {
+        throw new Error(
+          apartmentsData?.error ||
+            "Unable to load the selected residence.",
+        );
+      }
+
+      const databaseApartment =
+        Array.isArray(
+          apartmentsData?.apartments,
+        )
+          ? apartmentsData.apartments.find(
+              (
+                item: {
+                  slug?: string;
+                },
+              ) =>
+                item.slug === aSlug,
+            )
+          : null;
+
+      if (!databaseApartment?.id) {
+        throw new Error(
+          "The selected residence could not be found. Please return and select it again.",
+        );
+      }
+
+      /*
+       * Create the pending booking.
+       */
+      const response =
+        await fetch("/api/bookings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            apartmentId:
+              databaseApartment.id,
+            checkIn,
+            checkOut,
+            guests,
+            guestName: name.trim(),
+            guestEmail: email.trim(),
+            guestPhone: phone.trim(),
+            specialRequests:
+              special.trim(),
+            arrivalTime:
+              arrivalTime.trim(),
+          }),
+        });
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Unable to create your reservation. Please try again.",
+        );
+      }
+
+      if (!data?.booking?.id) {
+        throw new Error(
+          "The reservation could not be created. Please try again.",
+        );
+      }
+
+      /*
+       * Save the booking form locally so that if the guest
+       * returns from Paystack, their details can be restored.
+       *
+       * Nothing personal is placed in the URL.
+       */
+      if (
+        typeof window !== "undefined"
+      ) {
+        window.sessionStorage.setItem(
+          `rahat-booking-${data.booking.id}`,
+          JSON.stringify({
+            apartment: aSlug,
+            checkIn,
+            checkOut,
+            guests,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            arrivalTime:
+              arrivalTime.trim(),
+            special:
+              special.trim(),
+          }),
+        );
+      }
+
+      /*
+       * Initialize Paystack directly.
+       *
+       * There is NO intermediate /checkout page.
+       */
+      const paymentResponse =
+        await fetch(
+          "/api/payments/paystack/initialize",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              bookingId:
+                data.booking.id,
+            }),
+          },
+        );
+
+      const paymentData =
+        await paymentResponse.json();
+
+      if (!paymentResponse.ok) {
+        throw new Error(
+          paymentData?.error ||
+            "Unable to start payment. Please try again.",
+        );
+      }
+
+      if (
+        !paymentData?.authorizationUrl
+      ) {
+        throw new Error(
+          "Paystack checkout could not be started. Please try again.",
+        );
+      }
+
+      /*
+       * Send the guest directly to Paystack.
+       */
+      window.location.assign(
+        paymentData.authorizationUrl,
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to create your reservation. Please try again.",
+      );
+
+      setSubmitting(false);
+    }
+  }
+
+  /*
+   * =========================================================
+   * BACK
+   * =========================================================
+   */
+
+  function back() {
+    if (submitting) {
+      return;
+    }
+
+    setError("");
+
+    if (step === 1) {
+      router.push(
+        `/apartments/${encodeURIComponent(
+          aSlug,
+        )}`,
+      );
+
+      return;
+    }
+
+    setStep(
+      (current) =>
+        (current - 1) as Step,
     );
   }
 
-  function back() {
-    setError("");
+  /*
+   * =========================================================
+   * FORMATTED DATES
+   * =========================================================
+   */
 
-   const apt = getApartment(aSlug);
+  const formattedCheckIn = checkIn
+    ? new Date(
+        `${checkIn}T00:00:00`,
+      ).toLocaleDateString(
+        "en-NG",
+        {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        },
+      )
+    : "Select date";
 
-if (!apt) {
-  return null;
-}
+  const formattedCheckOut = checkOut
+    ? new Date(
+        `${checkOut}T00:00:00`,
+      ).toLocaleDateString(
+        "en-NG",
+        {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        },
+      )
+    : "Select date";
 
-    setStep((current) => (current - 1) as Step);
-  }
+  const formattedUnavailableFrom =
+    unavailableFrom
+      ? new Date(
+          `${unavailableFrom}T00:00:00`,
+        ).toLocaleDateString(
+          "en-NG",
+          {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          },
+        )
+      : null;
 
-  const formattedCheckIn = new Date(
-    `${checkIn}T00:00:00`,
-  ).toLocaleDateString("en-NG", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const formattedUnavailableTo =
+    unavailableTo
+      ? new Date(
+          `${unavailableTo}T00:00:00`,
+        ).toLocaleDateString(
+          "en-NG",
+          {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          },
+        )
+      : null;
 
-  const formattedCheckOut = new Date(
-    `${checkOut}T00:00:00`,
-  ).toLocaleDateString("en-NG", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const hasUnavailableDates =
+    availabilityStatus ===
+      "unavailable" &&
+    Boolean(
+      formattedUnavailableFrom &&
+        formattedUnavailableTo,
+    );
 
   return (
     <main className="min-h-screen bg-[#f4f2ed] text-[#0b0b0b]">
       {/* =====================================================
-          HEADER
-      ===================================================== */}
-      
-      {/* =====================================================
           PAGE
       ===================================================== */}
+
       <div className="mx-auto max-w-[1500px] px-5 pb-10 pt-28 sm:px-8 sm:pb-14 sm:pt-32 lg:px-12 lg:pb-16 lg:pt-36">
         {/* =================================================
             TOP CONTEXT
         ================================================= */}
+
         <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <div className="flex items-center gap-3 text-[9px] uppercase tracking-[0.28em] text-[#8A6E3F]">
@@ -236,65 +690,74 @@ if (!apt) {
 
             <h1 className="display mt-5 max-w-4xl text-[clamp(3rem,6vw,6.2rem)] font-light leading-[0.88] tracking-[-0.06em]">
               Complete your
-              <span className="block text-black/35">reservation.</span>
+              <span className="block text-black/35">
+                reservation.
+              </span>
             </h1>
           </div>
 
           {/* Progress */}
+
           <div className="w-full lg:w-[430px]">
             <div className="flex items-center justify-between">
-              {steps.map((item, index) => {
-                const active = step === item.number;
-                const complete = step > item.number;
+              {steps.map(
+                (item, index) => {
+                  const active =
+                    step === item.number;
 
-                return (
-                  <div
-                    key={item.number}
-                    className="flex flex-1 items-center"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-medium transition ${
-                          complete
-                            ? "bg-[#D5B270] text-black"
-                            : active
-                              ? "bg-black text-white"
-                              : "bg-black/[0.07] text-black/35"
-                        }`}
-                      >
-                        {complete ? (
-                          <Check size={13} />
-                        ) : (
-                          item.number
-                        )}
-                      </span>
+                  const complete =
+                    step > item.number;
 
-                      <span
-                        className={`hidden text-[9px] uppercase tracking-[0.15em] sm:block ${
-                          active
-                            ? "text-black"
-                            : "text-black/35"
-                        }`}
-                      >
-                        {item.label}
-                      </span>
+                  return (
+                    <div
+                      key={item.number}
+                      className="flex flex-1 items-center"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-medium transition ${
+                            complete
+                              ? "bg-[#D5B270] text-black"
+                              : active
+                                ? "bg-black text-white"
+                                : "bg-black/[0.07] text-black/35"
+                          }`}
+                        >
+                          {complete ? (
+                            <Check size={13} />
+                          ) : (
+                            item.number
+                          )}
+                        </span>
+
+                        <span
+                          className={`hidden text-[9px] uppercase tracking-[0.15em] sm:block ${
+                            active
+                              ? "text-black"
+                              : "text-black/35"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </div>
+
+                      {index <
+                        steps.length -
+                          1 && (
+                        <span className="mx-3 h-px flex-1 bg-black/10" />
+                      )}
                     </div>
-
-                    {index < steps.length - 1 && (
-                      <span className="mx-3 h-px flex-1 bg-black/10" />
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                },
+              )}
             </div>
           </div>
         </div>
 
         {/* =================================================
             SELECTED RESIDENCE
-            If user arrived from a residence page, there is
-            NO second apartment-selection experience.
         ================================================= */}
+
         <div className="mt-10 overflow-hidden rounded-[1.5rem] border border-black/[0.07] bg-white sm:mt-14">
           <div className="grid lg:grid-cols-[190px_1fr_auto]">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#ddd9d0] lg:aspect-auto">
@@ -321,7 +784,9 @@ if (!apt) {
 
                 <span className="text-[8px] uppercase tracking-[0.2em] text-black/35">
                   {apt.bedrooms}{" "}
-                  {Number(apt.bedrooms) === 1
+                  {Number(
+                    apt.bedrooms,
+                  ) === 1
                     ? "Bedroom"
                     : "Bedrooms"}
                 </span>
@@ -342,7 +807,9 @@ if (!apt) {
               </p>
 
               <p className="mt-1 text-xl font-medium tracking-[-0.025em]">
-                {formatNaira(apt.pricePerNight)}
+                {formatNaira(
+                  apt.pricePerNight,
+                )}
               </p>
 
               <p className="mt-1 text-[8px] uppercase tracking-[0.16em] text-black/35">
@@ -361,12 +828,17 @@ if (!apt) {
         {/* =================================================
             MAIN BOOKING GRID
         ================================================= */}
+
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
           {/* =================================================
               FORM PANEL
           ================================================= */}
+
           <section className="overflow-hidden rounded-[1.5rem] bg-white shadow-[0_15px_60px_rgba(0,0,0,.045)] ring-1 ring-black/[0.035]">
-            {/* Step 1 */}
+            {/* =================================================
+                STEP 1
+            ================================================= */}
+
             {step === 1 && (
               <div className="p-6 sm:p-9 lg:p-10">
                 <div>
@@ -379,93 +851,229 @@ if (!apt) {
                   </h2>
 
                   <p className="mt-4 max-w-xl text-sm leading-6 text-black/45">
-                    Select your dates and number of guests. We&apos;ll check
-                    the residence before you move forward.
+                    Select your dates and
+                    number of guests. We&apos;ll
+                    check the residence before
+                    you move forward.
                   </p>
                 </div>
 
                 {/* Date fields */}
-                <div className="mt-9 grid overflow-hidden rounded-2xl border border-black/10 md:grid-cols-2">
-                  <label className="group relative border-b border-black/10 p-5 md:border-b-0 md:border-r">
-                    <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-black/35">
-                      <CalendarDays size={14} className="text-[#8A6E3F]" />
-                      Check in
-                    </span>
+
+                <div className="mt-9 space-y-4">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                      Check-in
+                    </label>
 
                     <input
-                      min={today}
                       type="date"
                       value={checkIn}
+                      min={today}
                       onChange={(event) => {
-                        setCheckIn(event.target.value);
-
-                        if (event.target.value >= checkOut) {
-                          const next = new Date(
-                            `${event.target.value}T00:00:00`,
-                          );
-                          next.setDate(next.getDate() + 1);
-                          setCheckOut(formatLocalDate(next));
-                        }
+                        setCheckIn(
+                          event.target.value,
+                        );
+                        setCheckOut("");
                       }}
-                      className="mt-4 w-full bg-transparent text-lg font-medium outline-none"
+                      className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
                     />
+                  </div>
 
-                    <span className="mt-2 block text-[9px] text-black/30">
-                      Arrival date
-                    </span>
-                  </label>
-
-                  <label className="group p-5">
-                    <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-black/35">
-                      <CalendarDays size={14} className="text-[#8A6E3F]" />
-                      Check out
-                    </span>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                      Check-out
+                    </label>
 
                     <input
-                      min={checkIn}
                       type="date"
                       value={checkOut}
-                      onChange={(event) =>
-                        setCheckOut(event.target.value)
+                      min={
+                        checkIn ||
+                        today
                       }
-                      className="mt-4 w-full bg-transparent text-lg font-medium outline-none"
+                      onChange={(event) => {
+                        setCheckOut(
+                          event.target.value,
+                        );
+                      }}
+                      className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
                     />
-
-                    <span className="mt-2 block text-[9px] text-black/30">
-                      Departure date
-                    </span>
-                  </label>
+                  </div>
                 </div>
 
                 {/* Guests */}
+
                 <div className="mt-4 rounded-2xl border border-black/10 p-5">
                   <label className="block">
                     <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-black/35">
-                      <UserRound size={14} className="text-[#8A6E3F]" />
+                      <UserRound
+                        size={14}
+                        className="text-[#8A6E3F]"
+                      />
                       Guests
                     </span>
 
                     <select
                       value={guests}
                       onChange={(event) =>
-                        setGuests(Number(event.target.value))
+                        setGuests(
+                          Number(
+                            event.target
+                              .value,
+                          ),
+                        )
                       }
                       className="mt-4 w-full bg-transparent text-base font-medium outline-none"
                     >
                       {Array.from(
-                        { length: Math.max(4, Number(apt.capacity)) },
-                        (_, index) => index + 1,
-                      ).map((count) => (
-                        <option key={count} value={count}>
-                          {count}{" "}
-                          {count === 1 ? "guest" : "guests"}
-                        </option>
-                      ))}
+                        {
+                          length:
+                            Math.max(
+                              4,
+                              Number(
+                                apt.capacity,
+                              ),
+                            ),
+                        },
+                        (_, index) =>
+                          index + 1,
+                      ).map(
+                        (count) => (
+                          <option
+                            key={count}
+                            value={count}
+                          >
+                            {count}{" "}
+                            {count === 1
+                              ? "guest"
+                              : "guests"}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
                 </div>
 
+                {/* Availability */}
+
+                {availabilityStatus !==
+                  "idle" && (
+                  <div
+                    className={`mt-4 rounded-2xl border px-5 py-4 ${
+                      availabilityStatus ===
+                      "available"
+                        ? "border-emerald-200 bg-emerald-50"
+                        : availabilityStatus ===
+                            "checking"
+                          ? "border-black/10 bg-[#f7f5ef]"
+                          : "border-red-200 bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {availabilityStatus ===
+                      "checking" ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/15 border-t-black" />
+                      ) : (
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            availabilityStatus ===
+                            "available"
+                              ? "bg-emerald-500"
+                              : "bg-red-500"
+                          }`}
+                        />
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] uppercase tracking-[0.18em] text-black/40">
+                          {availabilityStatus ===
+                          "checking"
+                            ? "Checking availability"
+                            : availabilityStatus ===
+                                "available"
+                              ? "Available"
+                              : availabilityStatus ===
+                                  "unavailable"
+                                ? "Residence unavailable"
+                                : "Not available"}
+                        </p>
+
+                        {availabilityStatus ===
+                        "checking" ? (
+                          <p className="mt-1 text-sm text-black/70">
+                            Checking these
+                            dates...
+                          </p>
+                        ) : availabilityStatus ===
+                            "unavailable" &&
+                          hasUnavailableDates ? (
+                          <>
+                            <p className="mt-1 text-sm leading-6 text-black/70">
+                              This residence
+                              is unavailable
+                              from{" "}
+                              <span className="font-medium text-black">
+                                {
+                                  formattedUnavailableFrom
+                                }
+                              </span>{" "}
+                              to{" "}
+                              <span className="font-medium text-black">
+                                {
+                                  formattedUnavailableTo
+                                }
+                              </span>
+                              .
+                            </p>
+
+                            {(
+                              conflictType ===
+                                "BOOKING" ||
+                              conflictType ===
+                                "BLOCKED" ||
+                              conflictType ===
+                                "HOLD"
+                            ) && (
+                              <>
+                                <p className="mt-2 text-xs leading-5 text-black/50">
+                                  Looking for
+                                  another
+                                  option?
+                                  Explore
+                                  our other
+                                  residences
+                                  for your
+                                  stay.
+                                </p>
+
+                                <Link
+                                  href="/apartments"
+                                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2.5 text-[9px] uppercase tracking-[0.16em] text-white transition hover:bg-[#8A6E3F]"
+                                >
+                                  Explore other
+                                  residences
+                                  <ArrowRight
+                                    size={12}
+                                  />
+                                </Link>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <p className="mt-1 text-sm text-black/70">
+                            {
+                              availabilityMessage
+                            }
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Availability reassurance */}
+
                 <div className="mt-8 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl bg-[#f7f5ef] p-4">
                     <CalendarDays
@@ -473,12 +1081,16 @@ if (!apt) {
                       className="text-[#8A6E3F]"
                       strokeWidth={1.4}
                     />
+
                     <p className="mt-3 text-[9px] uppercase tracking-[0.16em] text-black/35">
                       Your dates
                     </p>
+
                     <p className="mt-1 text-xs text-black/65">
                       {nights}{" "}
-                      {nights === 1 ? "night" : "nights"}
+                      {nights === 1
+                        ? "night"
+                        : "nights"}
                     </p>
                   </div>
 
@@ -488,9 +1100,11 @@ if (!apt) {
                       className="text-[#8A6E3F]"
                       strokeWidth={1.4}
                     />
+
                     <p className="mt-3 text-[9px] uppercase tracking-[0.16em] text-black/35">
                       Stay length
                     </p>
+
                     <p className="mt-1 text-xs text-black/65">
                       Flexible dates
                     </p>
@@ -502,18 +1116,24 @@ if (!apt) {
                       className="text-[#8A6E3F]"
                       strokeWidth={1.4}
                     />
+
                     <p className="mt-3 text-[9px] uppercase tracking-[0.16em] text-black/35">
                       Availability
                     </p>
+
                     <p className="mt-1 text-xs text-black/65">
-                      Checked before confirmation
+                      Updates as you
+                      select dates
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Step 2 */}
+            {/* =================================================
+                STEP 2
+            ================================================= */}
+
             {step === 2 && (
               <div className="p-6 sm:p-9 lg:p-10">
                 <div>
@@ -526,12 +1146,16 @@ if (!apt) {
                   </h2>
 
                   <p className="mt-4 max-w-xl text-sm leading-6 text-black/45">
-                    These details help us prepare for your arrival and keep
-                    your reservation connected to you.
+                    These details help us
+                    prepare for your arrival
+                    and keep your reservation
+                    connected to you.
                   </p>
                 </div>
 
                 <div className="mt-9 grid gap-5 sm:grid-cols-2">
+                  {/* Name */}
+
                   <label className="block">
                     <span className="text-[9px] uppercase tracking-[0.18em] text-black/40">
                       Full name
@@ -546,7 +1170,10 @@ if (!apt) {
                       <input
                         value={name}
                         onChange={(event) =>
-                          setName(event.target.value)
+                          setName(
+                            event.target
+                              .value,
+                          )
                         }
                         className="w-full bg-transparent px-3 py-4 text-sm outline-none"
                         placeholder="Your full name"
@@ -554,6 +1181,8 @@ if (!apt) {
                       />
                     </div>
                   </label>
+
+                  {/* Email */}
 
                   <label className="block">
                     <span className="text-[9px] uppercase tracking-[0.18em] text-black/40">
@@ -570,7 +1199,10 @@ if (!apt) {
                         type="email"
                         value={email}
                         onChange={(event) =>
-                          setEmail(event.target.value)
+                          setEmail(
+                            event.target
+                              .value,
+                          )
                         }
                         className="w-full bg-transparent px-3 py-4 text-sm outline-none"
                         placeholder="you@example.com"
@@ -578,6 +1210,8 @@ if (!apt) {
                       />
                     </div>
                   </label>
+
+                  {/* Phone */}
 
                   <label className="block">
                     <span className="text-[9px] uppercase tracking-[0.18em] text-black/40">
@@ -594,7 +1228,10 @@ if (!apt) {
                         type="tel"
                         value={phone}
                         onChange={(event) =>
-                          setPhone(event.target.value)
+                          setPhone(
+                            event.target
+                              .value,
+                          )
                         }
                         className="w-full bg-transparent px-3 py-4 text-sm outline-none"
                         placeholder="+234..."
@@ -602,6 +1239,8 @@ if (!apt) {
                       />
                     </div>
                   </label>
+
+                  {/* Arrival */}
 
                   <label className="block">
                     <span className="text-[9px] uppercase tracking-[0.18em] text-black/40">
@@ -618,7 +1257,10 @@ if (!apt) {
                         type="text"
                         value={arrivalTime}
                         onChange={(event) =>
-                          setArrivalTime(event.target.value)
+                          setArrivalTime(
+                            event.target
+                              .value,
+                          )
                         }
                         className="w-full bg-transparent px-3 py-4 text-sm outline-none"
                         placeholder="e.g. 3:00 PM"
@@ -635,7 +1277,10 @@ if (!apt) {
                   <textarea
                     value={special}
                     onChange={(event) =>
-                      setSpecial(event.target.value)
+                      setSpecial(
+                        event.target
+                          .value,
+                      )
                     }
                     rows={5}
                     className="mt-2 w-full resize-none rounded-xl border border-black/10 bg-[#faf9f6] p-4 text-sm leading-6 outline-none transition focus:border-[#8A6E3F]"
@@ -650,15 +1295,20 @@ if (!apt) {
                   />
 
                   <p className="text-[11px] leading-5 text-black/45">
-                    Your information is used to prepare and manage your
-                    reservation. We do not need anything else from you at this
-                    stage.
+                    Your information is used
+                    to prepare and manage your
+                    reservation. We do not need
+                    anything else from you at
+                    this stage.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Step 3 */}
+            {/* =================================================
+                STEP 3
+            ================================================= */}
+
             {step === 3 && (
               <div className="p-6 sm:p-9 lg:p-10">
                 <div>
@@ -671,11 +1321,13 @@ if (!apt) {
                   </h2>
 
                   <p className="mt-4 max-w-xl text-sm leading-6 text-black/45">
-                    Review your stay details before continuing to checkout.
+                    Review your stay details
+                    before secure payment.
                   </p>
                 </div>
 
                 {/* Stay */}
+
                 <div className="mt-9 overflow-hidden rounded-2xl border border-black/10">
                   <div className="flex items-start justify-between gap-5 border-b border-black/10 p-5">
                     <div>
@@ -688,13 +1340,16 @@ if (!apt) {
                       </h3>
 
                       <p className="mt-1 text-xs text-black/40">
-                        {apt.type} · Ikota GRA, Lagos
+                        {apt.type} · Ikota GRA,
+                        Lagos
                       </p>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => setStep(1)}
+                      onClick={() =>
+                        setStep(1)
+                      }
                       className="text-[8px] uppercase tracking-[0.18em] text-black/40 underline-offset-4 hover:text-black hover:underline"
                     >
                       Edit
@@ -706,6 +1361,7 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
                         Check in
                       </p>
+
                       <p className="mt-2 text-sm font-medium">
                         {formattedCheckIn}
                       </p>
@@ -715,6 +1371,7 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
                         Check out
                       </p>
+
                       <p className="mt-2 text-sm font-medium">
                         {formattedCheckOut}
                       </p>
@@ -724,15 +1381,19 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
                         Guests
                       </p>
+
                       <p className="mt-2 text-sm font-medium">
                         {guests}{" "}
-                        {guests === 1 ? "guest" : "guests"}
+                        {guests === 1
+                          ? "guest"
+                          : "guests"}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Guest */}
+
                 <div className="mt-4 rounded-2xl border border-black/10 p-5">
                   <div className="flex items-center justify-between gap-5">
                     <p className="text-[8px] uppercase tracking-[0.22em] text-[#8A6E3F]">
@@ -741,7 +1402,9 @@ if (!apt) {
 
                     <button
                       type="button"
-                      onClick={() => setStep(2)}
+                      onClick={() =>
+                        setStep(2)
+                      }
                       className="text-[8px] uppercase tracking-[0.18em] text-black/40 underline-offset-4 hover:text-black hover:underline"
                     >
                       Edit
@@ -753,13 +1416,17 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.16em] text-black/30">
                         Name
                       </p>
-                      <p className="mt-1 text-sm">{name}</p>
+
+                      <p className="mt-1 text-sm">
+                        {name}
+                      </p>
                     </div>
 
                     <div>
                       <p className="text-[8px] uppercase tracking-[0.16em] text-black/30">
                         Email
                       </p>
+
                       <p className="mt-1 break-all text-sm">
                         {email}
                       </p>
@@ -769,7 +1436,10 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.16em] text-black/30">
                         Phone
                       </p>
-                      <p className="mt-1 text-sm">{phone}</p>
+
+                      <p className="mt-1 text-sm">
+                        {phone}
+                      </p>
                     </div>
                   </div>
 
@@ -778,6 +1448,7 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.16em] text-black/30">
                         Estimated arrival
                       </p>
+
                       <p className="mt-1 text-sm">
                         {arrivalTime}
                       </p>
@@ -789,6 +1460,7 @@ if (!apt) {
                       <p className="text-[8px] uppercase tracking-[0.16em] text-black/30">
                         Special requests
                       </p>
+
                       <p className="mt-1 text-sm leading-6 text-black/60">
                         {special}
                       </p>
@@ -804,11 +1476,13 @@ if (!apt) {
 
                   <div>
                     <p className="text-sm font-medium">
-                      Availability is checked before confirmation.
+                      Payment confirms your
+                      reservation.
                     </p>
 
                     <p className="mt-1 text-[11px] leading-5 text-black/40">
-                      Your reservation remains subject to final inventory
+                      Your reservation remains
+                      subject to final inventory
                       confirmation.
                     </p>
                   </div>
@@ -817,6 +1491,7 @@ if (!apt) {
             )}
 
             {/* Error */}
+
             {error && (
               <div className="mx-6 mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:mx-9 lg:mx-10">
                 {error}
@@ -824,27 +1499,39 @@ if (!apt) {
             )}
 
             {/* Bottom controls */}
+
             <div className="flex items-center justify-between border-t border-black/10 bg-[#faf9f6] p-5 sm:px-9 lg:px-10">
               <button
                 type="button"
                 onClick={back}
-                className="inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-black/40 transition hover:text-black"
+                disabled={submitting}
+                className="inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-black/40 transition hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowLeft size={13} />
-                {step === 1 ? "Residence" : "Back"}
+
+                {step === 1
+                  ? "Residence"
+                  : "Back"}
               </button>
 
               <button
                 type="button"
                 onClick={next}
-                className="group inline-flex items-center gap-4 rounded-full bg-black px-6 py-3.5 text-[9px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8A6E3F] sm:px-7"
+                disabled={submitting}
+                className="group inline-flex items-center gap-4 rounded-full bg-black px-6 py-3.5 text-[9px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8A6E3F] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7"
               >
-                {step === 3
-                  ? "Continue to checkout"
-                  : "Continue"}
+                {submitting
+                  ? "Opening secure payment..."
+                  : step === 3
+                    ? "Continue to checkout"
+                    : "Continue"}
 
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition group-hover:translate-x-1">
-                  <ArrowRight size={13} />
+                  {submitting ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border border-white/30 border-t-white" />
+                  ) : (
+                    <ArrowRight size={13} />
+                  )}
                 </span>
               </button>
             </div>
@@ -853,6 +1540,7 @@ if (!apt) {
           {/* =================================================
               STICKY ORDER SUMMARY
           ================================================= */}
+
           <aside className="lg:sticky lg:top-24">
             <div className="overflow-hidden rounded-[1.5rem] bg-black text-white shadow-[0_20px_70px_rgba(0,0,0,.12)]">
               <div className="p-6 sm:p-7">
@@ -862,7 +1550,11 @@ if (!apt) {
                   </p>
 
                   <span className="font-mono text-[9px] tracking-[0.14em] text-white/30">
-                    {String(step).padStart(2, "0")} / 03
+                    {String(step).padStart(
+                      2,
+                      "0",
+                    )}{" "}
+                    / 03
                   </span>
                 </div>
 
@@ -871,12 +1563,14 @@ if (!apt) {
                 </h2>
 
                 <p className="mt-2 text-xs text-white/40">
-                  {apt.type} · up to {apt.capacity} guests
+                  {apt.type} · up to{" "}
+                  {apt.capacity} guests
                 </p>
 
                 <div className="my-7 h-px bg-white/10" />
 
                 {/* Dates */}
+
                 <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
                   <div className="grid grid-cols-2">
                     <div className="border-r border-white/10 pr-4">
@@ -912,37 +1606,65 @@ if (!apt) {
                 </div>
 
                 {/* Price */}
+
                 <div className="mt-6 space-y-4 text-sm">
-                  <div className="flex justify-between gap-5">
-                    <span className="text-white/45">
-                      {formatNaira(apt.pricePerNight)} × {nights}{" "}
-                      {nights === 1 ? "night" : "nights"}
-                    </span>
+                  {price ? (
+                    <>
+                      <div className="flex justify-between gap-5">
+                        <span className="text-white/45">
+                          {formatNaira(
+                            apt.pricePerNight,
+                          )}{" "}
+                          × {nights}{" "}
+                          {nights === 1
+                            ? "night"
+                            : "nights"}
+                        </span>
 
-                    <span>
-                      {formatNaira(price.subtotal)}
-                    </span>
-                  </div>
+                        <span>
+                          {formatNaira(
+                            price.subtotal,
+                          )}
+                        </span>
+                      </div>
 
-                  <div className="flex justify-between gap-5">
-                    <span className="text-white/45">
-                      Cleaning fee
-                    </span>
+                      <div className="flex justify-between gap-5">
+                        <span className="text-white/45">
+                          Cleaning fee
+                        </span>
 
-                    <span>
-                      {formatNaira(price.cleaningFee)}
-                    </span>
-                  </div>
+                        <span>
+                          {formatNaira(
+                            price.cleaningFee,
+                          )}
+                        </span>
+                      </div>
 
-                  <div className="flex justify-between gap-5">
-                    <span className="text-white/45">
-                      Service fee
-                    </span>
+                      <div className="flex justify-between gap-5">
+                        <span className="text-white/45">
+                          Service fee
+                        </span>
 
-                    <span>
-                      {formatNaira(price.serviceFee)}
-                    </span>
-                  </div>
+                        <span>
+                          {formatNaira(
+                            price.serviceFee,
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-white/30">
+                        Pricing
+                      </p>
+
+                      <p className="mt-2 text-sm text-white/45">
+                        Select your check-in
+                        and check-out dates
+                        to see your total.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="my-6 h-px bg-white/10" />
@@ -954,18 +1676,28 @@ if (!apt) {
                     </p>
 
                     <p className="mt-2 text-2xl font-medium tracking-[-0.03em]">
-                      {formatNaira(price.total)}
+                      {price
+                        ? formatNaira(
+                            price.total,
+                          )
+                        : "—"}
                     </p>
                   </div>
 
                   <span className="text-[8px] uppercase tracking-[0.14em] text-[#D5B270]">
-                    {nights}{" "}
-                    {nights === 1 ? "night" : "nights"}
+                    {price
+                      ? `${nights} ${
+                          nights === 1
+                            ? "night"
+                            : "nights"
+                        }`
+                      : "Select dates"}
                   </span>
                 </div>
               </div>
 
               {/* Trust footer */}
+
               <div className="border-t border-white/10 bg-white/[0.025] px-6 py-5 sm:px-7">
                 <div className="flex gap-3">
                   <ShieldCheck
@@ -976,12 +1708,16 @@ if (!apt) {
 
                   <div>
                     <p className="text-[10px] font-medium text-white/70">
-                      A focused booking experience.
+                      A focused booking
+                      experience.
                     </p>
 
                     <p className="mt-1 text-[10px] leading-5 text-white/30">
-                      You&apos;re reserving {apt.name}. Other residences
-                      aren&apos;t shown here so you can complete this stay
+                      You&apos;re reserving{" "}
+                      {apt.name}. Other
+                      residences aren&apos;t
+                      shown here so you can
+                      complete this stay
                       without distraction.
                     </p>
                   </div>
@@ -990,11 +1726,14 @@ if (!apt) {
             </div>
 
             {/* Small context link */}
+
             <Link
               href={`/apartments/${apt.slug}`}
               className="group mt-4 flex items-center justify-between rounded-xl border border-black/10 bg-white px-4 py-4 text-[9px] uppercase tracking-[0.17em] text-black/45 transition hover:text-black"
             >
-              <span>Review residence</span>
+              <span>
+                Review residence
+              </span>
 
               <ChevronRight
                 size={14}

@@ -1,13 +1,208 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum ApartmentStatus { AVAILABLE MAINTENANCE INACTIVE }
-enum BookingStatus { PENDING CONFIRMED CHECKED_IN COMPLETED CANCELLED }
-enum PaymentStatus { PENDING INITIATED PAID FAILED CANCELLED REFUNDED }
-model User { id String @id @default(cuid()) email String @unique name String phone String? bookings Booking[] createdAt DateTime @default(now()) }
-model Apartment { id String @id @default(cuid()) slug String @unique name String type String bedrooms Int bathrooms Int capacity Int pricePerNight Int status ApartmentStatus @default(AVAILABLE) description String images ApartmentImage[] amenities Amenity[] bookings Booking[] blocks BlockedDate[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
-model ApartmentImage { id String @id @default(cuid()) url String alt String apartmentId String apartment Apartment @relation(fields:[apartmentId], references:[id], onDelete: Cascade) }
-model Amenity { id String @id @default(cuid()) name String apartmentId String apartment Apartment @relation(fields:[apartmentId], references:[id], onDelete: Cascade) }
-model Booking { id String @id @default(cuid()) bookingReference String @unique userId String? apartmentId String checkIn DateTime checkOut DateTime guests Int guestName String guestEmail String guestPhone String? specialRequests String? arrivalTime String? subtotal Int cleaningFee Int serviceFee Int total Int bookingStatus BookingStatus @default(PENDING) paymentStatus PaymentStatus @default(PENDING) user User? @relation(fields:[userId], references:[id]) apartment Apartment @relation(fields:[apartmentId], references:[id]) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
-model Review { id String @id @default(cuid()) apartmentId String rating Int author String comment String createdAt DateTime @default(now()) apartment Apartment @relation(fields:[apartmentId], references:[id], onDelete: Cascade) }
-model BlockedDate { id String @id @default(cuid()) apartmentId String startDate DateTime endDate DateTime reason String apartment Apartment @relation(fields:[apartmentId], references:[id], onDelete: Cascade) }
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ApartmentStatus {
+  AVAILABLE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  INITIATED
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  FLUTTERWAVE
+  MANUAL
+}
+
+enum HoldStatus {
+  ACTIVE
+  EXPIRED
+  RELEASED
+  CONVERTED
+}
+
+model User {
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String
+  phone String?
+
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Apartment {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  name          String
+  type          String
+  bedrooms      Int
+  bathrooms     Int
+  capacity      Int
+  pricePerNight Int
+  status        ApartmentStatus @default(AVAILABLE)
+  description   String
+
+  images    ApartmentImage[]
+  amenities Amenity[]
+  bookings  Booking[]
+  blocks    BlockedDate[]
+  holds     BookingHold[]
+  reviews   Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ApartmentImage {
+  id  String @id @default(cuid())
+  url String
+  alt String
+
+  apartmentId String
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+}
+
+model Amenity {
+  id   String @id @default(cuid())
+  name String
+
+  apartmentId String
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id                    String         @id @default(cuid())
+  bookingReference      String         @unique
+  guestAccessTokenHash  String?        @unique
+  userId                String?
+  apartmentId            String
+
+  checkIn  DateTime
+  checkOut DateTime
+  guests   Int
+
+  guestName       String
+  guestEmail      String
+  guestPhone      String?
+  specialRequests String?
+  arrivalTime     String?
+
+  subtotal    Int
+  cleaningFee Int
+  serviceFee  Int
+  taxes       Int @default(0)
+  discount    Int @default(0)
+  total       Int
+
+  bookingStatus BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  holdId String? @unique
+
+  user      User?        @relation(fields: [userId], references: [id])
+  apartment Apartment    @relation(fields: [apartmentId], references: [id])
+  hold      BookingHold? @relation(fields: [holdId], references: [id])
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([apartmentId, checkIn, checkOut])
+  @@index([guestEmail])
+  @@index([bookingStatus, paymentStatus])
+}
+
+model BookingHold {
+  id String @id @default(cuid())
+
+  apartmentId String
+  checkIn     DateTime
+  checkOut    DateTime
+  expiresAt   DateTime
+
+  status HoldStatus @default(ACTIVE)
+
+  apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  booking   Booking?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([apartmentId, checkIn, checkOut])
+  @@index([status, expiresAt])
+}
+
+model Payment {
+  id        String @id @default(cuid())
+  bookingId String
+
+  provider  PaymentProvider
+  reference String          @unique
+  amount    Int
+  currency  String          @default("NGN")
+
+  status          PaymentStatus @default(PENDING)
+  gatewayResponse Json?
+  paidAt          DateTime?
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+model Review {
+  id String @id @default(cuid())
+
+  apartmentId String
+  rating      Int
+  author      String
+  comment     String
+
+  createdAt DateTime @default(now())
+
+  apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+}
+
+model BlockedDate {
+  id String @id @default(cuid())
+
+  apartmentId String
+  startDate   DateTime
+  endDate     DateTime
+  reason      String
+
+  apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@index([apartmentId, startDate, endDate])
+}

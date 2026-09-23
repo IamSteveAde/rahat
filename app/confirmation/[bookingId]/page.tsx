@@ -11,24 +11,22 @@ import {
   Phone,
   Sparkles,
 } from "lucide-react";
-import {
-  formatNaira,
-  getApartment,
-  nightsBetween,
-} from "@/lib/data";
+import PrintConfirmationButton from "@/components/confirmation/PrintConfirmationButton";
+
+import { getBooking } from "@/lib/booking";
+import { formatNaira } from "@/lib/data";
 
 type ConfirmationProps = {
   params: {
     bookingId: string;
   };
-  searchParams: Record<string, string | undefined>;
 };
 
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
+function formatDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return value;
+    return "—";
   }
 
   return date.toLocaleDateString("en-NG", {
@@ -39,21 +37,34 @@ function formatDate(value: string) {
   });
 }
 
-function createReference(bookingId: string) {
-  return `RHT-${bookingId.slice(-8).toUpperCase()}`;
+function formatLongDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleDateString("en-NG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
-export default function Confirmation({
-  params,
-  searchParams,
-}: ConfirmationProps) {
-  const slug = searchParams.apartment || "monica";
-  const apartment = getApartment(slug);
+function formatBookingStatus(status: string) {
+  return status
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
-  /*
-   * Keep the page resilient if an invalid apartment slug is supplied.
-   */
-  if (!apartment) {
+export default async function Confirmation({
+  params,
+}: ConfirmationProps) {
+  const booking = await getBooking(params.bookingId);
+
+  if (!booking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee] px-5 text-black">
         <div className="max-w-md text-center">
@@ -62,8 +73,13 @@ export default function Confirmation({
           </p>
 
           <h1 className="display mt-4 text-5xl font-light tracking-[-0.05em]">
-            We couldn&apos;t find this residence.
+            We couldn&apos;t find this reservation.
           </h1>
+
+          <p className="mt-5 text-sm leading-6 text-black/45">
+            The booking may no longer be available, or the
+            confirmation link may be incorrect.
+          </p>
 
           <Link
             href="/apartments"
@@ -77,76 +93,115 @@ export default function Confirmation({
     );
   }
 
-  const checkIn = searchParams.checkIn || "2026-09-12";
-  const checkOut = searchParams.checkOut || "2026-09-15";
-  const guests = Number(searchParams.guests || 2);
+  const apartment = booking.apartment;
 
-  const nights = nightsBetween(checkIn, checkOut);
-  const subtotal = apartment.pricePerNight * nights;
-  const cleaningFee = apartment.bedrooms === 2 ? 50000 : 30000;
-  const serviceFee = Math.round(subtotal * 0.1);
-  const total = subtotal + cleaningFee + serviceFee;
+  const primaryImage =
+    apartment.images?.[0]?.url || "/images/gallery/r1.jpeg";
 
-  const reference = createReference(params.bookingId);
+  const nights = Math.max(
+    1,
+    Math.round(
+      (new Date(booking.checkOut).getTime() -
+        new Date(booking.checkIn).getTime()) /
+        (1000 * 60 * 60 * 24),
+    ),
+  );
 
-  const guestName = searchParams.name || "Guest";
-  const guestEmail = searchParams.email || "";
-  const guestPhone = searchParams.phone || "";
+  const isPaid = booking.paymentStatus === "PAID";
+
+  const isConfirmed =
+    booking.bookingStatus === "CONFIRMED" ||
+    booking.bookingStatus === "CHECKED_IN" ||
+    booking.bookingStatus === "COMPLETED";
+
+  const isSuccessful = isPaid && isConfirmed;
+
+  const latestPayment = booking.payments?.[0];
 
   return (
-    <main className="min-h-screen bg-[#f5f3ee] text-[#0b0b0b]">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f3ee] text-[#0b0b0b]">
       {/* =========================================================
-          TOP BAR
+          SUCCESS HERO
       ========================================================= */}
-      
-      {/* =========================================================
-          HERO
-      ========================================================= */}
+
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
           <img
-            src="/images/gallery/r5.jpeg"
-            alt=""
-            className="h-full w-full object-cover opacity-45"
-          />
+  src={primaryImage}
+  alt={apartment.name}
+  className="h-full w-full object-cover opacity-40"
+/>
 
-          <div className="absolute inset-0 bg-black/55" />
-
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-black" />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/50 to-black" />
         </div>
 
-        <div className="relative mx-auto flex min-h-[70svh] max-w-[1440px] items-end px-5 pb-14 pt-28 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
+        <div className="relative mx-auto max-w-[1440px] px-5 pb-14 pt-28 sm:px-8 sm:pb-16 lg:px-12 lg:pb-20">
           <div className="max-w-5xl">
             <div className="flex items-center gap-3 text-[9px] uppercase tracking-[0.3em] text-[#d5b270]">
               <span className="h-px w-8 bg-[#d5b270]" />
-              Reservation confirmed
+
+              {isSuccessful
+                ? "Reservation confirmed"
+                : formatBookingStatus(
+                    booking.bookingStatus,
+                  )}
             </div>
 
             <div className="mt-7 flex items-start gap-5">
-              <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#d5b270]/30 bg-[#d5b270]/10 sm:flex">
-                <Check size={24} strokeWidth={1.4} className="text-[#d5b270]" />
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#d5b270]/30 bg-[#d5b270]/10">
+                {isSuccessful ? (
+                  <Check
+                    size={24}
+                    strokeWidth={1.4}
+                    className="text-[#d5b270]"
+                  />
+                ) : (
+                  <Sparkles
+                    size={22}
+                    strokeWidth={1.3}
+                    className="text-[#d5b270]"
+                  />
+                )}
               </div>
 
               <div>
                 <h1 className="display max-w-4xl text-[clamp(3.4rem,8vw,8rem)] font-light leading-[0.82] tracking-[-0.065em]">
-                  Your stay
-                  <span className="block text-white/40">is waiting.</span>
+                  {isSuccessful ? (
+                    <>
+                      Your stay
+                      <span className="block text-white/40">
+                        is confirmed.
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Your reservation
+                      <span className="block text-white/40">
+                        is on record.
+                      </span>
+                    </>
+                  )}
                 </h1>
 
-                <p className="mt-7 max-w-xl text-sm leading-7 text-white/55 sm:text-base">
-                  Your reservation at Rahat Luxury Apartment has been
-                  successfully recorded. We look forward to welcoming you.
+                <p className="mt-7 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
+                  {isSuccessful
+                    ? "Your payment was successful and your reservation is confirmed. We look forward to welcoming you to Rahat."
+                    : "Your reservation details are available below. Keep your confirmation reference for any assistance."}
                 </p>
               </div>
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3">
+            {/* Confirmation reference */}
+
+            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5">
               <div>
                 <p className="text-[8px] uppercase tracking-[0.22em] text-white/30">
                   Confirmation
                 </p>
+
                 <p className="mt-1 font-mono text-xs tracking-[0.08em] text-white/80">
-                  {reference}
+                  {booking.bookingReference}
                 </p>
               </div>
 
@@ -154,12 +209,23 @@ export default function Confirmation({
 
               <div>
                 <p className="text-[8px] uppercase tracking-[0.22em] text-white/30">
-                  Status
+                  Payment
                 </p>
 
                 <div className="mt-1 flex items-center gap-2 text-xs text-white/80">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#d5b270]" />
-                  Confirmed
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isPaid
+                        ? "bg-[#d5b270]"
+                        : "bg-white/35"
+                    }`}
+                  />
+
+                  {isPaid
+                    ? "Paid successfully"
+                    : formatBookingStatus(
+                        booking.paymentStatus,
+                      )}
                 </div>
               </div>
             </div>
@@ -168,21 +234,61 @@ export default function Confirmation({
       </section>
 
       {/* =========================================================
-          CONFIRMATION CONTENT
+          EMAIL CONFIRMATION NOTICE
       ========================================================= */}
-      <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+
+      <section className="mx-auto max-w-[1440px] px-5 pt-8 sm:px-8 lg:px-12">
+        <div className="rounded-[1.5rem] border border-[#8a6e3f]/15 bg-white p-6 ring-1 ring-black/[0.03] sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f5f1e8]">
+              <Mail
+                size={19}
+                strokeWidth={1.4}
+                className="text-[#8a6e3f]"
+              />
+            </div>
+
+            <div className="flex-1">
+              <p className="text-[9px] uppercase tracking-[0.22em] text-[#8a6e3f]">
+                Confirmation & receipt
+              </p>
+
+              <h2 className="mt-2 text-sm font-medium">
+                Your reservation details are ready.
+              </h2>
+
+              <p className="mt-1.5 text-sm leading-6 text-black/45">
+                Your reservation confirmation and payment receipt
+                will be sent to:
+              </p>
+
+              <p className="mt-1 text-sm font-medium text-black/70">
+                {booking.guestEmail}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          MAIN CONTENT
+      ========================================================= */}
+
+      <section className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start">
           {/* =====================================================
               LEFT
           ===================================================== */}
+
           <div>
             {/* Residence */}
+
             <section className="overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-black/[0.045]">
               <div className="relative h-[320px] overflow-hidden sm:h-[420px]">
                 <img
-                  src="/images/gallery/r1.jpeg"
+                  src={primaryImage}
                   alt={apartment.name}
-                  className="h-full w-full object-cover transition duration-700 hover:scale-[1.02]"
+                  className="h-full w-full object-cover"
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
@@ -202,6 +308,8 @@ export default function Confirmation({
                 </div>
               </div>
 
+              {/* Stay information */}
+
               <div className="grid border-t border-black/[0.07] sm:grid-cols-3">
                 <div className="border-b border-black/[0.07] p-6 sm:border-b-0 sm:border-r">
                   <p className="text-[8px] uppercase tracking-[0.2em] text-black/30">
@@ -209,7 +317,11 @@ export default function Confirmation({
                   </p>
 
                   <p className="mt-2 text-sm font-medium">
-                    {formatDate(checkIn)}
+                    {formatLongDate(booking.checkIn)}
+                  </p>
+
+                  <p className="mt-1 text-xs text-black/40">
+                    From 3:00 PM
                   </p>
                 </div>
 
@@ -219,23 +331,36 @@ export default function Confirmation({
                   </p>
 
                   <p className="mt-2 text-sm font-medium">
-                    {formatDate(checkOut)}
+                    {formatLongDate(booking.checkOut)}
+                  </p>
+
+                  <p className="mt-1 text-xs text-black/40">
+                    Before 12:00 PM
                   </p>
                 </div>
 
                 <div className="p-6">
                   <p className="text-[8px] uppercase tracking-[0.2em] text-black/30">
-                    Guests
+                    Stay
                   </p>
 
                   <p className="mt-2 text-sm font-medium">
-                    {guests} {guests === 1 ? "guest" : "guests"}
+                    {nights}{" "}
+                    {nights === 1 ? "night" : "nights"}
+                  </p>
+
+                  <p className="mt-1 text-xs text-black/40">
+                    {booking.guests}{" "}
+                    {booking.guests === 1
+                      ? "guest"
+                      : "guests"}
                   </p>
                 </div>
               </div>
             </section>
 
             {/* Guest details */}
+
             <section className="mt-5 rounded-[1.5rem] bg-white p-6 ring-1 ring-black/[0.045] sm:p-8">
               <div className="flex items-center justify-between gap-5">
                 <div>
@@ -244,7 +369,7 @@ export default function Confirmation({
                   </p>
 
                   <h2 className="display mt-2 text-3xl font-light tracking-[-0.045em]">
-                    Prepared for you.
+                    Your reservation details.
                   </h2>
                 </div>
 
@@ -260,41 +385,116 @@ export default function Confirmation({
               <div className="mt-7 grid gap-6 sm:grid-cols-2">
                 <div>
                   <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                    Guest
+                    Full name
                   </p>
-                  <p className="mt-2 text-sm">{guestName}</p>
+
+                  <p className="mt-2 text-sm">
+                    {booking.guestName}
+                  </p>
                 </div>
 
-                {guestEmail && (
-                  <div>
-                    <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                      Email
-                    </p>
-                    <p className="mt-2 break-all text-sm">{guestEmail}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                    Email
+                  </p>
 
-                {guestPhone && (
+                  <p className="mt-2 break-all text-sm">
+                    {booking.guestEmail}
+                  </p>
+                </div>
+
+                {booking.guestPhone && (
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
                       Phone
                     </p>
-                    <p className="mt-2 text-sm">{guestPhone}</p>
+
+                    <p className="mt-2 text-sm">
+                      {booking.guestPhone}
+                    </p>
                   </div>
                 )}
 
-                <div>
+                {booking.arrivalTime && (
+                  <div>
+                    <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                      Estimated arrival
+                    </p>
+
+                    <p className="mt-2 text-sm">
+                      {booking.arrivalTime}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {booking.specialRequests && (
+                <div className="mt-6 border-t border-black/10 pt-5">
                   <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
-                    Stay length
+                    Special requests
                   </p>
-                  <p className="mt-2 text-sm">
-                    {nights} {nights === 1 ? "night" : "nights"}
+
+                  <p className="mt-2 text-sm leading-6 text-black/60">
+                    {booking.specialRequests}
                   </p>
                 </div>
+              )}
+            </section>
+
+            {/* Payment details */}
+
+            <section className="mt-5 rounded-[1.5rem] bg-white p-6 ring-1 ring-black/[0.045] sm:p-8">
+              <p className="text-[8px] uppercase tracking-[0.24em] text-[#8a6e3f]">
+                Payment confirmation
+              </p>
+
+              <h2 className="display mt-2 text-3xl font-light tracking-[-0.045em]">
+                Payment received.
+              </h2>
+
+              <div className="mt-7 grid gap-6 sm:grid-cols-2">
+                <div>
+                  <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                    Amount paid
+                  </p>
+
+                  <p className="mt-2 text-xl font-medium">
+                    {formatNaira(booking.total)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                    Payment status
+                  </p>
+
+                  <p className="mt-2 flex items-center gap-2 text-sm">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f1f7f1]">
+                      <Check
+                        size={11}
+                        className="text-emerald-700"
+                      />
+                    </span>
+                    Paid successfully
+                  </p>
+                </div>
+
+                {latestPayment?.reference && (
+                  <div className="sm:col-span-2">
+                    <p className="text-[8px] uppercase tracking-[0.18em] text-black/30">
+                      Payment reference
+                    </p>
+
+                    <p className="mt-2 break-all font-mono text-xs text-black/55">
+                      {latestPayment.reference}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
-            {/* Arrival guidance */}
+            {/* Destination */}
+
             <section className="mt-5 rounded-[1.5rem] bg-[#ebe7de] p-6 sm:p-8">
               <div className="flex gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-white">
@@ -311,7 +511,8 @@ export default function Confirmation({
                   </h2>
 
                   <p className="mt-2 max-w-lg text-sm leading-6 text-black/50">
-                    1 Begonia Avenue, Ikota GRA, Lagos, Nigeria.
+                    1 Begonia Avenue, Ikota GRA, Lagos,
+                    Nigeria.
                   </p>
 
                   <a
@@ -332,8 +533,9 @@ export default function Confirmation({
           </div>
 
           {/* =====================================================
-              RIGHT — STAY SUMMARY
+              RIGHT — RESERVATION SUMMARY
           ===================================================== */}
+
           <aside className="lg:sticky lg:top-8">
             <div className="overflow-hidden rounded-[1.75rem] bg-black text-white shadow-[0_25px_80px_rgba(0,0,0,.12)]">
               <div className="p-6 sm:p-8">
@@ -345,7 +547,11 @@ export default function Confirmation({
                   <CheckCircle2
                     size={18}
                     strokeWidth={1.3}
-                    className="text-[#d5b270]"
+                    className={
+                      isSuccessful
+                        ? "text-[#d5b270]"
+                        : "text-white/35"
+                    }
                   />
                 </div>
 
@@ -359,58 +565,106 @@ export default function Confirmation({
 
                 <div className="my-7 h-px bg-white/10" />
 
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-5">
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.18em] text-white/30">
-                      Arrival
+                      Check in
                     </p>
+
                     <p className="mt-2 text-sm text-white/80">
-                      {formatDate(checkIn)}
+                      {formatLongDate(booking.checkIn)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-white/35">
+                      From 3:00 PM
                     </p>
                   </div>
 
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.18em] text-white/30">
-                      Departure
+                      Check out
                     </p>
+
                     <p className="mt-2 text-sm text-white/80">
-                      {formatDate(checkOut)}
+                      {formatLongDate(booking.checkOut)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-white/35">
+                      Before 12:00 PM
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-5">
+                <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
                   <span className="text-[8px] uppercase tracking-[0.18em] text-white/30">
                     Guests
                   </span>
 
                   <span className="text-sm text-white/80">
-                    {guests} {guests === 1 ? "guest" : "guests"}
+                    {booking.guests}{" "}
+                    {booking.guests === 1
+                      ? "guest"
+                      : "guests"}
                   </span>
                 </div>
 
                 <div className="my-7 h-px bg-white/10" />
 
-                {/* Price breakdown */}
                 <div className="space-y-4 text-sm">
                   <div className="flex items-center justify-between gap-5">
                     <span className="text-white/40">
-                      {formatNaira(apartment.pricePerNight)} × {nights}
+                      {formatNaira(apartment.pricePerNight)} ×{" "}
+                      {nights}
                     </span>
 
-                    <span>{formatNaira(subtotal)}</span>
+                    <span>
+                      {formatNaira(booking.subtotal)}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-5">
-                    <span className="text-white/40">Cleaning fee</span>
-                    <span>{formatNaira(cleaningFee)}</span>
+                    <span className="text-white/40">
+                      Cleaning fee
+                    </span>
+
+                    <span>
+                      {formatNaira(booking.cleaningFee)}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-5">
-                    <span className="text-white/40">Service fee</span>
-                    <span>{formatNaira(serviceFee)}</span>
+                    <span className="text-white/40">
+                      Service fee
+                    </span>
+
+                    <span>
+                      {formatNaira(booking.serviceFee)}
+                    </span>
                   </div>
+
+                  {booking.taxes > 0 && (
+                    <div className="flex items-center justify-between gap-5">
+                      <span className="text-white/40">
+                        Taxes
+                      </span>
+
+                      <span>
+                        {formatNaira(booking.taxes)}
+                      </span>
+                    </div>
+                  )}
+
+                  {booking.discount > 0 && (
+                    <div className="flex items-center justify-between gap-5">
+                      <span className="text-white/40">
+                        Discount
+                      </span>
+
+                      <span>
+                        -{formatNaira(booking.discount)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="my-7 h-px bg-white/10" />
@@ -421,7 +675,7 @@ export default function Confirmation({
                   </p>
 
                   <p className="mt-2 text-3xl font-medium tracking-[-0.04em]">
-                    {formatNaira(total)}
+                    {formatNaira(booking.total)}
                   </p>
                 </div>
 
@@ -430,41 +684,81 @@ export default function Confirmation({
                     <CheckCircle2
                       size={16}
                       strokeWidth={1.4}
-                      className="mt-0.5 shrink-0 text-[#d5b270]"
+                      className={
+                        isSuccessful
+                          ? "mt-0.5 shrink-0 text-[#d5b270]"
+                          : "mt-0.5 shrink-0 text-white/40"
+                      }
                     />
 
                     <div>
                       <p className="text-[10px] font-medium text-white/80">
-                        Reservation confirmed
+                        {isSuccessful
+                          ? "Reservation confirmed"
+                          : formatBookingStatus(
+                              booking.bookingStatus,
+                            )}
                       </p>
 
                       <p className="mt-1 text-[9px] leading-5 text-white/35">
-                        Keep your confirmation reference handy for your arrival.
+                        Your confirmation reference is:
+                      </p>
+
+                      <p className="mt-1 font-mono text-[9px] text-white/60">
+                        {booking.bookingReference}
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Reference footer */}
+              {/* Reference */}
+
               <div className="border-t border-white/10 bg-white/[0.025] px-6 py-5 sm:px-8">
-                <div className="flex items-center justify-between gap-5">
-                  <div>
-                    <p className="text-[7px] uppercase tracking-[0.18em] text-white/25">
-                      Reference
-                    </p>
+                <div>
+                  <p className="text-[7px] uppercase tracking-[0.18em] text-white/25">
+                    Booking reference
+                  </p>
 
-                    <p className="mt-1 font-mono text-[10px] tracking-[0.08em] text-white/60">
-                      {reference}
-                    </p>
-                  </div>
-
-                  <span className="rounded-full border border-[#d5b270]/25 px-3 py-1.5 text-[7px] uppercase tracking-[0.15em] text-[#d5b270]">
-                    Paid
-                  </span>
+                  <p className="mt-1 font-mono text-[10px] tracking-[0.08em] text-white/60">
+                    {booking.bookingReference}
+                  </p>
                 </div>
               </div>
             </div>
+
+            {/* Actions */}
+
+            <div className="mt-4 grid gap-3">
+             <PrintConfirmationButton />
+
+              <Link
+                href="/my-bookings"
+                className="group inline-flex items-center justify-center gap-3 rounded-full bg-black px-6 py-4 text-[9px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8a6e3f]"
+              >
+                View my booking
+                <ArrowRight
+                  size={13}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </Link>
+
+              <Link
+                href="/contact"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-6 py-4 text-[9px] uppercase tracking-[0.18em] text-black/55 transition hover:border-black/20 hover:text-black"
+              >
+                <MessageCircle size={14} />
+                Contact Rahat
+              </Link>
+            </div>
+
+            <a
+              href="tel:+2340000000000"
+              className="mt-4 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.17em] text-black/40 transition hover:text-black"
+            >
+              <Phone size={12} />
+              Contact Rahat
+            </a>
           </aside>
         </div>
       </section>
@@ -472,6 +766,7 @@ export default function Confirmation({
       {/* =========================================================
           WHAT'S NEXT
       ========================================================= */}
+
       <section className="border-t border-black/[0.07] bg-white">
         <div className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
           <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-end">
@@ -493,10 +788,13 @@ export default function Confirmation({
                   className="text-[#8a6e3f]"
                 />
 
-                <p className="mt-6 text-xs font-medium">Confirmation</p>
+                <p className="mt-6 text-xs font-medium">
+                  Confirmation
+                </p>
 
                 <p className="mt-2 text-[10px] leading-5 text-black/40">
-                  Keep your reservation reference for easy access.
+                  Your reservation details and payment receipt
+                  will be sent to your email.
                 </p>
               </div>
 
@@ -507,7 +805,9 @@ export default function Confirmation({
                   className="text-[#8a6e3f]"
                 />
 
-                <p className="mt-6 text-xs font-medium">Find us</p>
+                <p className="mt-6 text-xs font-medium">
+                  Find us
+                </p>
 
                 <p className="mt-2 text-[10px] leading-5 text-black/40">
                   Your residence is in Ikota GRA, Lagos.
@@ -521,10 +821,13 @@ export default function Confirmation({
                   className="text-[#8a6e3f]"
                 />
 
-                <p className="mt-6 text-xs font-medium">Need anything?</p>
+                <p className="mt-6 text-xs font-medium">
+                  Need anything?
+                </p>
 
                 <p className="mt-2 text-[10px] leading-5 text-black/40">
-                  Our team is available to help with your stay.
+                  Our team is available to help with your
+                  stay.
                 </p>
               </div>
             </div>
@@ -533,8 +836,9 @@ export default function Confirmation({
       </section>
 
       {/* =========================================================
-          ACTIONS
+          FINAL ACTIONS
       ========================================================= */}
+
       <section className="bg-[#f5f3ee]">
         <div className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
           <div className="flex flex-col gap-8 rounded-[1.75rem] bg-[#e9e4d9] p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:p-10">
@@ -546,6 +850,13 @@ export default function Confirmation({
               <h2 className="display mt-3 text-3xl font-light tracking-[-0.045em] sm:text-4xl">
                 Ready for your Rahat stay?
               </h2>
+
+              <p className="mt-3 text-sm text-black/45">
+                Confirmation{" "}
+                <span className="font-mono text-black/60">
+                  {booking.bookingReference}
+                </span>
+              </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -554,6 +865,7 @@ export default function Confirmation({
                 className="group inline-flex items-center justify-center gap-3 rounded-full bg-black px-6 py-3.5 text-[9px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8a6e3f]"
               >
                 View my booking
+
                 <ArrowRight
                   size={13}
                   className="transition-transform group-hover:translate-x-1"
@@ -573,8 +885,9 @@ export default function Confirmation({
       </section>
 
       {/* =========================================================
-          FOOTER NOTE
+          FOOTER
       ========================================================= */}
+
       <footer className="border-t border-black/[0.07] bg-[#f5f3ee]">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-5 py-8 sm:px-8 sm:py-10 md:flex-row md:items-center md:justify-between lg:px-12">
           <p className="display text-xl font-light tracking-[-0.04em]">
@@ -594,6 +907,7 @@ export default function Confirmation({
             className="group flex items-center gap-2 text-[8px] uppercase tracking-[0.18em] text-black/40 hover:text-black"
           >
             Back home
+
             <ChevronRight
               size={13}
               className="transition-transform group-hover:translate-x-1"
@@ -601,6 +915,42 @@ export default function Confirmation({
           </Link>
         </div>
       </footer>
+
+      {/* =========================================================
+          PRINT STYLES
+      ========================================================= */}
+
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+          }
+
+          main {
+            background: white !important;
+          }
+
+          aside {
+            position: static !important;
+          }
+
+          button,
+          a[href="/my-bookings"],
+          a[href="/contact"],
+          a[href="/apartments"],
+          footer {
+            display: none !important;
+          }
+
+          section {
+            break-inside: avoid;
+          }
+
+          .print-hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
