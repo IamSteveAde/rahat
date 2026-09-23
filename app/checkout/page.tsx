@@ -6,10 +6,15 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 
 type PaymentState =
   | "starting"
@@ -18,7 +23,7 @@ type PaymentState =
   | "error"
   | "complete";
 
-export default function CheckoutReturn() {
+function CheckoutContent() {
   const params = useSearchParams();
 
   const bookingId = params.get("bookingId");
@@ -64,7 +69,8 @@ export default function CheckoutReturn() {
 
         if (!response.ok) {
           throw new Error(
-            data?.error || "We could not start your payment.",
+            data?.error ||
+              "We could not start your payment.",
           );
         }
 
@@ -76,7 +82,9 @@ export default function CheckoutReturn() {
           setMessage("Reservation confirmed. Redirecting…");
 
           window.location.replace(
-            `/confirmation/${encodeURIComponent(data.booking.id)}`,
+            `/confirmation/${encodeURIComponent(
+              data.booking.id,
+            )}`,
           );
 
           return;
@@ -87,7 +95,9 @@ export default function CheckoutReturn() {
          */
         if (data.authorizationUrl) {
           setState("waiting");
-          setMessage("Redirecting you to secure payment…");
+          setMessage(
+            "Redirecting you to secure payment…",
+          );
 
           window.location.assign(data.authorizationUrl);
 
@@ -141,7 +151,9 @@ export default function CheckoutReturn() {
 
         if (data.booking?.id) {
           setState("complete");
-          setMessage("Payment confirmed. Redirecting…");
+          setMessage(
+            "Payment confirmed. Redirecting…",
+          );
 
           window.location.replace(
             `/confirmation/${encodeURIComponent(
@@ -201,7 +213,6 @@ export default function CheckoutReturn() {
     <main className="min-h-screen bg-[#f5f3ee] px-5 pb-24 pt-32 text-[#0b0b0b] sm:pt-36 lg:px-8 lg:pt-40">
       <div className="mx-auto flex min-h-[65svh] max-w-xl items-center justify-center">
         <div className="w-full text-center">
-
           {/* Brand mark */}
           <Link
             href="/"
@@ -282,7 +293,6 @@ export default function CheckoutReturn() {
 
           {/* Actions */}
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-
             {isError && bookingId && (
               <Link
                 href={`/checkout?bookingId=${encodeURIComponent(
@@ -301,10 +311,43 @@ export default function CheckoutReturn() {
               <ArrowLeft size={13} />
               Return to apartments
             </Link>
-
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function CheckoutFallback() {
+  return (
+    <main className="min-h-screen bg-[#f5f3ee] px-5 pb-24 pt-32 text-[#0b0b0b] sm:pt-36 lg:px-8 lg:pt-40">
+      <div className="mx-auto flex min-h-[65svh] max-w-xl items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-black/10 bg-white">
+            <Loader2
+              size={24}
+              strokeWidth={1.4}
+              className="animate-spin text-[#8a6e3f]"
+            />
+          </div>
+
+          <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-[#8a6e3f]">
+            Secure payment
+          </p>
+
+          <h1 className="display mt-4 text-4xl font-light tracking-[-0.04em]">
+            Preparing your checkout…
+          </h1>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function CheckoutReturn() {
+  return (
+    <Suspense fallback={<CheckoutFallback />}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

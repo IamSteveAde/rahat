@@ -14,54 +14,121 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  if (!isAdminRequest(req)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await isAdminRequest())) {
+    return NextResponse.json(
+      { error: "Unauthorized." },
+      { status: 401 },
+    );
+  }
 
   try {
     const input = schema.parse(await req.json());
-    const { start, end } = assertDateRange(input.startDate, input.endDate);
 
-    const apartment = await prisma.apartment.findUnique({ where: { id: input.apartmentId } });
-    if (!apartment) return NextResponse.json({ error: "Apartment not found." }, { status: 404 });
+    const { start, end } = assertDateRange(
+      input.startDate,
+      input.endDate,
+    );
 
-    const existingBooking = await prisma.booking.findFirst({
+    const apartment = await prisma.apartment.findUnique({
       where: {
-        apartmentId: apartment.id,
-        bookingStatus: { in: ["CONFIRMED", "CHECKED_IN"] },
-        checkIn: { lt: end },
-        checkOut: { gt: start },
+        id: input.apartmentId,
       },
     });
 
+    if (!apartment) {
+      return NextResponse.json(
+        { error: "Apartment not found." },
+        { status: 404 },
+      );
+    }
+
+    const existingBooking =
+      await prisma.booking.findFirst({
+        where: {
+          apartmentId: apartment.id,
+          bookingStatus: {
+            in: ["CONFIRMED", "CHECKED_IN"],
+          },
+          checkIn: {
+            lt: end,
+          },
+          checkOut: {
+            gt: start,
+          },
+        },
+      });
+
     if (existingBooking) {
       return NextResponse.json(
-        { error: "These dates overlap an existing confirmed booking." },
+        {
+          error:
+            "These dates overlap an existing confirmed booking.",
+        },
         { status: 409 },
       );
     }
 
     const block = await prisma.blockedDate.create({
-      data: { apartmentId: apartment.id, startDate: start, endDate: end, reason: input.reason },
+      data: {
+        apartmentId: apartment.id,
+        startDate: start,
+        endDate: end,
+        reason: input.reason,
+      },
     });
 
-    return NextResponse.json({ block }, { status: 201 });
+    return NextResponse.json(
+      { block },
+      { status: 201 },
+    );
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to block dates." },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to block dates.",
+      },
       { status: 400 },
     );
   }
 }
 
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await isAdminRequest())) {
+    return NextResponse.json(
+      { error: "Unauthorized." },
+      { status: 401 },
+    );
+  }
 
   try {
-    const blocks = await prisma.blockedDate.findMany({
-      include: { apartment: { select: { id: true, name: true, slug: true } } },
-      orderBy: { startDate: "asc" },
+    const blocks =
+      await prisma.blockedDate.findMany({
+        include: {
+          apartment: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+        orderBy: {
+          startDate: "asc",
+        },
+      });
+
+    return NextResponse.json({
+      blocks,
     });
-    return NextResponse.json({ blocks });
   } catch {
-    return NextResponse.json({ error: "Unable to load blocked dates." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load blocked dates.",
+      },
+      { status: 500 },
+    );
   }
 }
