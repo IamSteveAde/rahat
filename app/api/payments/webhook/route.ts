@@ -3,6 +3,7 @@ import { confirmBookingPayment, markPaymentFailed } from "@/lib/booking";
 import { isValidPaystackSignature, verifyPaystackTransaction } from "@/lib/paystack";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const rawBody = await req.text();

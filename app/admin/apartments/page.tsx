@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { calculatePriceFromValues } from "@/lib/pricing";
+import { CAUTION_REFUND_NOTE, SERVICE_RATE, TAX_RATE } from "@/lib/payment-policy";
 
 type Apartment = {
   id: string;
@@ -76,6 +78,7 @@ function getNextDay(value: string) {
 
 export default function ApartmentsPage() {
   const tomorrow = useMemo(() => getTomorrow(), []);
+  const summaryRef = useRef<HTMLDivElement>(null);
 
   const [checkIn, setCheckIn] = useState(tomorrow);
   const [checkOut, setCheckOut] = useState(() =>
@@ -91,7 +94,7 @@ export default function ApartmentsPage() {
   const [specialRequests, setSpecialRequests] = useState("");
 
   const [paymentMode, setPaymentMode] =
-    useState<"PENDING" | "PAID">("PENDING");
+    useState<"PENDING" | "PAID" | null>(null);
 
   const [apartments, setApartments] = useState<
     AvailableApartment[]
@@ -224,6 +227,11 @@ export default function ApartmentsPage() {
       return;
     }
 
+    if (!paymentMode) {
+      setError("Select a payment status before confirming the booking.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -248,6 +256,7 @@ export default function ApartmentsPage() {
             specialRequests:
               specialRequests.trim(),
             paymentMode,
+            expectedTotal: selectedPrice?.total,
           }),
         },
       );
@@ -269,6 +278,7 @@ export default function ApartmentsPage() {
       setGuestPhone("");
       setArrivalTime("");
       setSpecialRequests("");
+      setPaymentMode(null);
       setSelectedApartment(null);
 
       await searchAvailability();
@@ -296,29 +306,16 @@ export default function ApartmentsPage() {
         .includes(searchTerm.toLowerCase()),
   );
 
-  const selectedNights =
-    checkIn &&
-    checkOut &&
-    checkOut > checkIn
-      ? Math.max(
-          1,
-          Math.round(
-            (new Date(
-              `${checkOut}T00:00:00`,
-            ).getTime() -
-              new Date(
-                `${checkIn}T00:00:00`,
-              ).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
+  const selectedPrice =
+    selectedApartment && checkIn && checkOut && checkOut > checkIn
+      ? calculatePriceFromValues(
+          selectedApartment.pricePerNight,
+          selectedApartment.bedrooms,
+          checkIn,
+          checkOut,
         )
-      : 0;
-
-  const estimatedTotal =
-    selectedApartment && selectedNights
-      ? selectedApartment.pricePerNight *
-        selectedNights
-      : 0;
+      : null;
+  const selectedNights = selectedPrice?.nights ?? 0;
 
   return (
     <AdminShell title="Apartments">
@@ -351,6 +348,7 @@ export default function ApartmentsPage() {
         {/* ALERT */}
         {(error || success) && (
           <div
+            role={error ? "alert" : "status"}
             className={`flex items-start gap-3 rounded-2xl border p-4 ${
               error
                 ? "border-red-100 bg-red-50 text-red-700"
@@ -376,7 +374,7 @@ export default function ApartmentsPage() {
         )}
 
         {/* MAIN WORKSPACE */}
-        <div className="grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]">
+        <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
           {/* LEFT — CUSTOMER DETAILS */}
           <section className="rounded-2xl border border-black/[0.06] bg-white p-6">
             <div className="mb-6">
@@ -559,63 +557,6 @@ export default function ApartmentsPage() {
               />
             </div>
 
-            {/* PAYMENT */}
-            <div className="mt-7">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-black/35">
-                Payment status
-              </p>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaymentMode("PENDING")
-                  }
-                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                    paymentMode === "PENDING"
-                      ? "border-black bg-black text-white"
-                      : "border-black/[0.08] bg-black/[0.02] text-black/60 hover:border-black/20"
-                  }`}
-                >
-                  <CreditCard size={15} />
-
-                  <span>
-                    <span className="block text-xs font-semibold">
-                      Payment pending
-                    </span>
-
-                    <span className="mt-0.5 block text-[9px] opacity-50">
-                      Customer pays later
-                    </span>
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaymentMode("PAID")
-                  }
-                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                    paymentMode === "PAID"
-                      ? "border-black bg-black text-white"
-                      : "border-black/[0.08] bg-black/[0.02] text-black/60 hover:border-black/20"
-                  }`}
-                >
-                  <Check size={15} />
-
-                  <span>
-                    <span className="block text-xs font-semibold">
-                      Paid manually
-                    </span>
-
-                    <span className="mt-0.5 block text-[9px] opacity-50">
-                      Cash / transfer
-                    </span>
-                  </span>
-                </button>
-              </div>
-            </div>
-
             {/* SEARCH */}
             <button
               type="button"
@@ -688,6 +629,154 @@ export default function ApartmentsPage() {
               )}
             </div>
 
+            {/* SELECTED BOOKING */}
+            {selectedApartment && selectedPrice && (
+              <div
+                ref={summaryRef}
+                tabIndex={-1}
+                aria-label="Reservation summary"
+                className="mt-6 mb-6 scroll-mt-24 overflow-hidden rounded-2xl bg-[#0a0a0a] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a96a]"
+              >
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-[0.18em] text-white/35">
+                        Reservation summary
+                      </p>
+
+                      <p className="mt-1 text-lg font-semibold">
+                        {selectedApartment.name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-white/40">
+                        {formatDate(checkIn)} →{" "}
+                        {formatDate(checkOut)}
+                      </p>
+                    </div>
+
+                    <Check
+                      size={18}
+                      className="shrink-0 text-[#c9a96a]"
+                    />
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-4 border-y border-white/10 py-4 sm:grid-cols-3">
+                    <SummaryItem
+                      label="Nights"
+                      value={String(
+                        selectedNights,
+                      )}
+                    />
+
+                    <SummaryItem
+                      label="Guests"
+                      value={String(guests)}
+                    />
+
+                    <SummaryItem
+                      label="Rate"
+                      value={formatNaira(
+                        selectedApartment.pricePerNight,
+                      )}
+                    />
+
+                  </div>
+
+                  <dl className="mt-4 space-y-3 text-xs">
+                    {[
+                      [`Accommodation (${selectedNights} ${selectedNights === 1 ? "night" : "nights"})`, selectedPrice.subtotal],
+                      [`Service charge (${SERVICE_RATE * 100}%)`, selectedPrice.serviceFee],
+                      [`Tax (${TAX_RATE * 100}%)`, selectedPrice.taxes],
+                      ["Refundable caution fee", selectedPrice.cautionFee],
+                    ].map(([label, amount]) => (
+                      <div key={label} className="flex justify-between gap-4">
+                        <dt className="text-white/65">{label}</dt>
+                        <dd className="shrink-0 font-medium">{formatNaira(Number(amount))}</dd>
+                      </div>
+                    ))}
+                    <div className="flex justify-between gap-4 border-t border-white/15 pt-4 text-base font-semibold">
+                      <dt>Total amount</dt>
+                      <dd>{formatNaira(selectedPrice.total)}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-3 text-[11px] leading-5 text-white/60">{CAUTION_REFUND_NOTE}</p>
+                  <fieldset disabled={submitting} className="mt-5 border-t border-white/15 pt-4">
+                    <legend className="px-1 text-xs font-semibold">Payment status · Required</legend>
+                    <p className="mb-3 text-xs leading-5 text-white/60">
+                      Select whether the customer still needs to pay or the full amount has been received.
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {([
+                        { value: "PENDING", label: "Payment pending", detail: "Customer pays later", icon: CreditCard },
+                        { value: "PAID", label: "Paid manually", detail: "Full amount received by cash / transfer", icon: Check },
+                      ] as const).map(({ value, label, detail, icon: Icon }) => (
+                        <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition focus-within:ring-2 focus-within:ring-[#c9a96a] ${
+                          paymentMode === value
+                            ? "border-[#c9a96a] bg-[#c9a96a]/10"
+                            : "border-white/15 bg-white/5 hover:border-white/40"
+                        }`}>
+                          <input
+                            type="radio"
+                            name="paymentStatus"
+                            value={value}
+                            checked={paymentMode === value}
+                            onChange={() => setPaymentMode(value)}
+                            required
+                            className="mt-0.5 accent-[#c9a96a]"
+                          />
+                          <span>
+                            <span className="flex items-center gap-2 text-xs font-semibold"><Icon size={14} />{label}</span>
+                            <span className="mt-1 block text-[11px] leading-4 text-white/60">{detail}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <p aria-live="polite" className="mt-3 text-xs text-[#c9a96a]">
+                      {paymentMode === "PAID"
+                        ? "The booking will be recorded as fully paid."
+                        : paymentMode === "PENDING"
+                          ? "The reservation will be confirmed with payment pending."
+                          : "Choose a payment status to enable confirmation."}
+                    </p>
+                  </fieldset>
+
+                  {error && (
+                    <p role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-xs leading-5 text-red-200">
+                      {error}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={createBooking}
+                    disabled={
+                      submitting ||
+                      !paymentMode ||
+                      !selectedApartment ||
+                      selectedNights < 1
+                    }
+                    className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#c9a96a] text-xs font-semibold text-black transition hover:bg-[#d6b878] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2
+                          size={15}
+                          className="animate-spin"
+                        />
+
+                        Creating reservation...
+                      </>
+                    ) : (
+                      <>
+                        Confirm booking
+                        <ArrowRight size={15} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* EMPTY STATE */}
             {apartments.length === 0 ? (
               <div className="mt-8 rounded-2xl border border-dashed border-black/10 px-6 py-20 text-center">
@@ -741,7 +830,7 @@ export default function ApartmentsPage() {
                 </div>
 
                 {/* APARTMENT GRID */}
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="mt-4 grid max-h-[65vh] gap-4 overflow-y-auto overscroll-contain p-1 md:grid-cols-2">
                   {filteredApartments.map(
                     (apartment) => {
                       const selected =
@@ -763,6 +852,13 @@ export default function ApartmentsPage() {
                               setSelectedApartment(
                                 apartment,
                               );
+                              requestAnimationFrame(() => {
+                                summaryRef.current?.focus({ preventScroll: true });
+                                summaryRef.current?.scrollIntoView({
+                                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+                                  block: "nearest",
+                                });
+                              });
                             }
                           }}
                           disabled={
@@ -944,91 +1040,6 @@ export default function ApartmentsPage() {
                   )}
                 </div>
               </>
-            )}
-
-            {/* SELECTED BOOKING */}
-            {selectedApartment && (
-              <div className="mt-6 overflow-hidden rounded-2xl bg-[#0a0a0a] text-white">
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[9px] uppercase tracking-[0.18em] text-white/35">
-                        Reservation summary
-                      </p>
-
-                      <p className="mt-1 text-lg font-semibold">
-                        {selectedApartment.name}
-                      </p>
-
-                      <p className="mt-1 text-xs text-white/40">
-                        {formatDate(checkIn)} →{" "}
-                        {formatDate(checkOut)}
-                      </p>
-                    </div>
-
-                    <Check
-                      size={18}
-                      className="shrink-0 text-[#c9a96a]"
-                    />
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-2 gap-4 border-y border-white/10 py-4 sm:grid-cols-4">
-                    <SummaryItem
-                      label="Nights"
-                      value={String(
-                        selectedNights,
-                      )}
-                    />
-
-                    <SummaryItem
-                      label="Guests"
-                      value={String(guests)}
-                    />
-
-                    <SummaryItem
-                      label="Rate"
-                      value={formatNaira(
-                        selectedApartment.pricePerNight,
-                      )}
-                    />
-
-                    <SummaryItem
-                      label="Total"
-                      value={formatNaira(
-                        estimatedTotal,
-                      )}
-                      strong
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={createBooking}
-                    disabled={
-                      submitting ||
-                      !selectedApartment ||
-                      selectedNights < 1
-                    }
-                    className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#c9a96a] text-xs font-semibold text-black transition hover:bg-[#d6b878] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2
-                          size={15}
-                          className="animate-spin"
-                        />
-
-                        Creating reservation...
-                      </>
-                    ) : (
-                      <>
-                        Confirm booking
-                        <ArrowRight size={15} />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
             )}
           </section>
         </div>

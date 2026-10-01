@@ -1,5 +1,5 @@
 import { getApartment } from "./data";
-import { prisma } from "./prisma";
+import { CAUTION_FEE, SERVICE_RATE, TAX_RATE } from "./payment-policy";
 
 export type PriceBreakdown = {
   nights: number;
@@ -8,6 +8,7 @@ export type PriceBreakdown = {
   cleaningFee: number;
   serviceFee: number;
   taxes: number;
+  cautionFee: number;
   discount: number;
   total: number;
 };
@@ -59,21 +60,22 @@ export function calculatePriceFromValues(
 
   const subtotal = pricePerNight * nights;
 
-  const cleaningFee =
-    bedrooms >= 2 ? 50_000 : 30_000;
+  const cleaningFee = 0;
 
   const serviceFee = Math.round(
-    subtotal * 0.1,
+    subtotal * SERVICE_RATE,
   );
 
-  const taxes = 0;
+  const taxes = Math.round(subtotal * TAX_RATE);
+  const cautionFee = CAUTION_FEE;
   const discount = 0;
 
   const total =
     subtotal +
     cleaningFee +
     serviceFee +
-    taxes -
+    taxes +
+    cautionFee -
     discount;
 
   return {
@@ -83,6 +85,7 @@ export function calculatePriceFromValues(
     cleaningFee,
     serviceFee,
     taxes,
+    cautionFee,
     discount,
     total,
   };
@@ -94,34 +97,6 @@ export function calculatePrice(
   checkOut: string,
 ) {
   const apartment = getApartment(slug);
-
-  if (!apartment) {
-    throw new Error("Apartment not found.");
-  }
-
-  return calculatePriceFromValues(
-    apartment.pricePerNight,
-    apartment.bedrooms,
-    checkIn,
-    checkOut,
-  );
-}
-
-export async function calculateDatabasePrice(
-  apartmentId: string,
-  checkIn: string,
-  checkOut: string,
-) {
-  const apartment =
-    await prisma.apartment.findUnique({
-      where: {
-        id: apartmentId,
-      },
-      select: {
-        pricePerNight: true,
-        bedrooms: true,
-      },
-    });
 
   if (!apartment) {
     throw new Error("Apartment not found.");

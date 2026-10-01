@@ -63,4 +63,4 @@ export function getAdminCookieOptions() {
     path: "/",
     maxAge: 60 * 60 * 12,
   };
-}
+} 

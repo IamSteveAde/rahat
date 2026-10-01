@@ -31,10 +31,9 @@ import {
   formatNaira,
 } from "@/lib/data";
 
-import {
-  calculatePrice,
-  validateBooking,
-} from "@/lib/booking";
+import { calculatePrice, type PriceBreakdown } from "@/lib/pricing";
+import { validateBooking } from "@/lib/booking-validation";
+import { CAUTION_REFUND_NOTE } from "@/lib/payment-policy";
 
 type Step = 1 | 2 | 3;
 
@@ -123,6 +122,8 @@ export function BookingFlow() {
   const [conflictType, setConflictType] =
     useState<string | null>(null);
 
+  const [quote, setQuote] = useState<{ key: string; price: PriceBreakdown } | null>(null);
+  const quoteKey = `${aSlug}:${checkIn}:${checkOut}:${guests}`;
   const apt = getApartment(aSlug);
 
 
@@ -130,7 +131,7 @@ export function BookingFlow() {
     return null;
   }
 
-  const price = useMemo(() => {
+  const estimatedPrice = useMemo(() => {
     if (!checkIn || !checkOut || checkIn >= checkOut) {
       return null;
     }
@@ -142,6 +143,7 @@ export function BookingFlow() {
     }
   }, [aSlug, checkIn, checkOut]);
 
+  const price = quote?.key === quoteKey ? quote.price : estimatedPrice;
   const nights = price?.nights ?? 0;
 
   /*
@@ -208,6 +210,7 @@ export function BookingFlow() {
         }
 
         if (data?.available) {
+          if (data.price) setQuote({ key: `${aSlug}:${checkIn}:${checkOut}:${guests}`, price: data.price });
           setAvailabilityStatus("available");
 
           setAvailabilityMessage(
@@ -464,6 +467,7 @@ export function BookingFlow() {
             checkIn,
             checkOut,
             guests,
+            expectedTotal: price?.total,
             guestName: name.trim(),
             guestEmail: email.trim(),
             guestPhone: phone.trim(),
@@ -996,7 +1000,7 @@ export function BookingFlow() {
                               : availabilityStatus ===
                                   "unavailable"
                                 ? "Residence unavailable"
-                                : "Not available"}
+                                : "Unable to check availability"}
                         </p>
 
                         {availabilityStatus ===
@@ -1613,7 +1617,7 @@ export function BookingFlow() {
                       <div className="flex justify-between gap-5">
                         <span className="text-white/45">
                           {formatNaira(
-                            apt.pricePerNight,
+                            price.nightlyRate,
                           )}{" "}
                           × {nights}{" "}
                           {nights === 1
@@ -1628,21 +1632,11 @@ export function BookingFlow() {
                         </span>
                       </div>
 
-                      <div className="flex justify-between gap-5">
-                        <span className="text-white/45">
-                          Cleaning fee
-                        </span>
 
-                        <span>
-                          {formatNaira(
-                            price.cleaningFee,
-                          )}
-                        </span>
-                      </div>
 
                       <div className="flex justify-between gap-5">
                         <span className="text-white/45">
-                          Service fee
+                          Service charge (2.5%)
                         </span>
 
                         <span>
@@ -1651,6 +1645,9 @@ export function BookingFlow() {
                           )}
                         </span>
                       </div>
+                      <div className="flex justify-between gap-5"><span className="text-white/45">Tax (7.5%)</span><span>{formatNaira(price.taxes)}</span></div>
+                      <div className="flex justify-between gap-5"><span className="text-white/45">Refundable caution fee</span><span>{formatNaira(price.cautionFee)}</span></div>
+                      <p className="text-xs leading-relaxed text-white/50">Tax and service charge are calculated on the accommodation subtotal. {CAUTION_REFUND_NOTE}</p>
                     </>
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-4">
@@ -1672,7 +1669,7 @@ export function BookingFlow() {
                 <div className="flex items-end justify-between gap-5">
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.2em] text-white/30">
-                      Total
+                      {quote?.key === quoteKey ? "Total" : "Estimated total"}
                     </p>
 
                     <p className="mt-2 text-2xl font-medium tracking-[-0.03em]">

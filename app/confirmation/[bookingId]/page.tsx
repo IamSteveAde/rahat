@@ -1,3 +1,4 @@
+import { CAUTION_REFUND_NOTE } from "@/lib/payment-policy";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -116,7 +117,7 @@ export default async function Confirmation({
 
   const isSuccessful = isPaid && isConfirmed;
 
-  const latestPayment = booking.payments?.[0];
+  const latestPayment = booking.payments?.find((payment) => payment.status === "PAID") ?? booking.payments?.[0];
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f5f3ee] text-[#0b0b0b]">
@@ -622,6 +623,7 @@ export default async function Confirmation({
                     </span>
                   </div>
 
+                  {booking.cleaningFee > 0 && (
                   <div className="flex items-center justify-between gap-5">
                     <span className="text-white/40">
                       Cleaning fee
@@ -631,10 +633,11 @@ export default async function Confirmation({
                       {formatNaira(booking.cleaningFee)}
                     </span>
                   </div>
+                  )}
 
                   <div className="flex items-center justify-between gap-5">
                     <span className="text-white/40">
-                      Service fee
+                      {booking.cautionFee > 0 ? "Service charge (2.5%)" : "Service charge"}
                     </span>
 
                     <span>
@@ -645,7 +648,7 @@ export default async function Confirmation({
                   {booking.taxes > 0 && (
                     <div className="flex items-center justify-between gap-5">
                       <span className="text-white/40">
-                        Taxes
+                        {booking.cautionFee > 0 ? "Tax (7.5%)" : "Tax"}
                       </span>
 
                       <span>
@@ -654,6 +657,11 @@ export default async function Confirmation({
                     </div>
                   )}
 
+                  {booking.cautionFee > 0 && (<>
+                    <div className="flex items-center justify-between gap-5"><span className="text-white/40">Refundable caution fee</span><span>{formatNaira(booking.cautionFee)}</span></div>
+                    <p className="text-xs leading-relaxed text-white/50">{CAUTION_REFUND_NOTE}</p>
+                  </>)}
+                  {latestPayment?.paidAt && (<p className="text-xs text-white/50">Paid: {new Date(latestPayment.paidAt).toLocaleString("en-NG", { timeZone: "Africa/Lagos", dateStyle: "long", timeStyle: "short" })} WAT</p>)}
                   {booking.discount > 0 && (
                     <div className="flex items-center justify-between gap-5">
                       <span className="text-white/40">
@@ -671,7 +679,7 @@ export default async function Confirmation({
 
                 <div>
                   <p className="text-[8px] uppercase tracking-[0.2em] text-white/30">
-                    Total paid
+                    {isPaid ? "Total paid" : "Total due"}
                   </p>
 
                   <p className="mt-2 text-3xl font-medium tracking-[-0.04em]">
@@ -793,8 +801,7 @@ export default async function Confirmation({
                 </p>
 
                 <p className="mt-2 text-[10px] leading-5 text-black/40">
-                  Your reservation details and payment receipt
-                  will be sent to your email.
+                  {isSuccessful ? "Your reservation details and payment receipt are queued for delivery to your email." : "Your payment receipt will be emailed after successful payment confirmation."}
                 </p>
               </div>
 

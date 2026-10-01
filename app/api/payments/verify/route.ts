@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPaystackTransaction } from "@/lib/paystack";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const schema = z.object({ reference: z.string().min(1) });
 

@@ -1,9 +1,11 @@
+import { publicDatabaseError } from "@/lib/database-errors";
 import { NextResponse } from "next/server";
 
 import {
   assertDateRange,
   isApartmentAvailable,
 } from "@/lib/availability";
+import { calculatePriceFromValues } from "@/lib/pricing";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +59,8 @@ export async function GET(req: Request) {
         slug: true,
         name: true,
         capacity: true,
+        pricePerNight: true,
+        bedrooms: true,
         status: true,
       },
     });
@@ -256,12 +260,18 @@ export async function GET(req: Request) {
     return NextResponse.json({
       apartment: databaseApartment.slug,
       available: true,
+      price: calculatePriceFromValues(databaseApartment.pricePerNight, databaseApartment.bedrooms, checkIn, checkOut),
       reason: null,
       unavailableFrom: null,
       unavailableTo: null,
       conflictType: null,
     });
   } catch (error) {
+    const databaseError = publicDatabaseError(error);
+    if (databaseError) {
+      console.error("Availability database request failed", { status: databaseError.status });
+      return NextResponse.json({ error: databaseError.message }, { status: databaseError.status });
+    }
     return NextResponse.json(
       {
         error:

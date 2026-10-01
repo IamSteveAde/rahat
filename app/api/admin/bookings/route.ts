@@ -6,6 +6,7 @@ import {
   Prisma,
 } from "@prisma/client";
 
+import { queueBookingReceipts, deliverBookingReceipts } from "@/lib/booking-email";
 import { prisma } from "@/lib/prisma";
 import {
   assertDateRange,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function makeReference() {
   const stamp = new Date()
@@ -199,6 +201,8 @@ export async function POST(req: Request) {
            * stale, so we check again immediately
            * before creating the reservation.
            */
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${apartment.id}))`;
+
           const available =
             await isApartmentAvailable(
               apartment.id,
@@ -220,6 +224,10 @@ export async function POST(req: Request) {
               checkIn,
               checkOut,
             );
+
+          if (body.expectedTotal !== undefined && body.expectedTotal !== price.total) {
+            throw new Error("The price has changed. Check availability again and review the updated total before confirming.");
+          }
 
           /*
            * Admin-created reservations are confirmed
@@ -272,6 +280,7 @@ export async function POST(req: Request) {
 
                 taxes:
                   price.taxes,
+                cautionFee: price.cautionFee,
 
                 discount:
                   price.discount,
@@ -333,6 +342,7 @@ export async function POST(req: Request) {
             });
           }
 
+          if (paymentMode === "PAID") await queueBookingReceipts(tx, createdBooking.id);
           return createdBooking;
         },
         {
@@ -343,6 +353,7 @@ export async function POST(req: Request) {
         },
       );
 
+    if (paymentMode === "PAID") await deliverBookingReceipts(booking.id);
     return NextResponse.json({
       success: true,
       booking,

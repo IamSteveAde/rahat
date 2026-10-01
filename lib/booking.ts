@@ -6,12 +6,11 @@ import {
 } from "@prisma/client";
 import { createHash, randomBytes } from "crypto";
 
-import { getApartment } from "./data";
+import { queueBookingReceipts, deliverBookingReceipts } from "./booking-email";
 
 import {
   assertDateRange,
   isApartmentAvailable,
-  releaseExpiredHolds,
 } from "./availability";
 
 import {
@@ -39,46 +38,7 @@ function hashGuestAccessToken(token: string) {
    BOOKING VALIDATION
 ========================================================= */
 
-export function validateBooking(
-  slug: string,
-  checkIn: string,
-  checkOut: string,
-  guests: number,
-) {
-  const apartment = getApartment(slug);
-
-  if (!apartment) {
-    return "Apartment not found.";
-  }
-
-  if (
-    !Number.isInteger(guests) ||
-    guests < 1
-  ) {
-    return "Please select at least one guest.";
-  }
-
-  if (guests > apartment.capacity) {
-    return `This apartment accommodates up to ${apartment.capacity} guests.`;
-  }
-
-  try {
-    assertDateRange(
-      checkIn,
-      checkOut,
-    );
-  } catch (error) {
-    return error instanceof Error
-      ? error.message
-      : "Please select valid dates.";
-  }
-
-  if (apartment.status !== "AVAILABLE") {
-    return "This apartment is currently unavailable.";
-  }
-
-  return null;
-}
+export { validateBooking } from "./booking-validation";
 
 /* =========================================================
    PRICING
@@ -113,6 +73,7 @@ export async function createBooking(input: {
   checkIn: string;
   checkOut: string;
   guests: number;
+  expectedTotal?: number;
   guestName: string;
   guestEmail: string;
   guestPhone?: string;
@@ -241,6 +202,10 @@ export async function createBooking(input: {
             input.checkOut,
           );
 
+        if (input.expectedTotal !== undefined && input.expectedTotal !== price.total) {
+          throw new Error("The price has changed. Refresh the booking page and review the updated total before paying.");
+        }
+
         /*
          * IMPORTANT:
          *
@@ -291,6 +256,7 @@ export async function createBooking(input: {
                 price.serviceFee,
 
               taxes: price.taxes,
+              cautionFee: price.cautionFee,
 
               discount:
                 price.discount,
@@ -345,239 +311,47 @@ export async function confirmBookingPayment(
   reference: string,
   gatewayResponse: unknown,
 ) {
-  /*
-   * Clean up genuinely expired legacy holds.
-   */
-  await releaseExpiredHolds();
-
-  /*
-   * Find the payment first.
-   */
-  const payment =
-    await prisma.payment.findUnique({
-      where: {
-        reference,
-      },
-
-      include: {
-        booking: {
-          include: {
-            apartment: true,
-            hold: true,
-          },
-        },
-      },
-    });
-
-  if (!payment) {
-    throw new Error(
-      "Payment reference not found.",
-    );
-  }
-
-  /*
-   * IDEMPOTENCY:
-   *
-   * If another verification request already completed
-   * this payment, return the confirmed booking immediately.
-   */
-  if (
-    payment.status ===
-      PaymentStatus.PAID &&
-    payment.booking.paymentStatus ===
-      PaymentStatus.PAID
-  ) {
-    const booking =
-      await getBooking(
-        payment.bookingId,
-      );
-
-    if (!booking) {
-      throw new Error(
-        "Booking not found.",
-      );
+  const transaction = gatewayResponse as {
+    status?: string; reference?: string; amount?: number; currency?: string; paid_at?: string | null;
+  };
+  const bookingId = await prisma.$transaction(async (tx) => {
+    const initial = await tx.payment.findUniqueOrThrow({ where: { reference }, include: { booking: true } });
+    // Serialise confirmations for the same apartment to prevent concurrent reservations.
+    // Execute without deserializing PostgreSQL's void lock result.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${initial.booking.apartmentId}))`;
+    const payment = await tx.payment.findUniqueOrThrow({ where: { reference }, include: { booking: true } });
+    const booking = payment.booking;
+    if (!transaction || transaction.status !== "success" || transaction.reference !== reference ||
+        transaction.amount !== payment.amount * 100 || transaction.currency !== payment.currency ||
+        payment.amount !== booking.total) {
+      throw new Error("Payment amount, currency or reference could not be verified.");
     }
-
-    return booking;
-  }
-
-  const booking =
-    payment.booking;
-
-  if (
-    booking.bookingStatus ===
-    BookingStatus.CANCELLED
-  ) {
-    throw new Error(
-      "This booking has been cancelled.",
-    );
-  }
-
-  if (
-    payment.amount !==
-    booking.total
-  ) {
-    throw new Error(
-      "Payment amount does not match the booking total.",
-    );
-  }
-
-  /*
-   * Check inventory before marking the payment as paid.
-   */
-  const available =
-    await isApartmentAvailable(
-      booking.apartmentId,
-      booking.checkIn,
-      booking.checkOut,
-      prisma,
-      booking.id,
-      booking.holdId ??
-        undefined,
-    );
-
-  if (!available) {
-    throw new Error(
-      "The apartment is no longer available for these dates.",
-    );
-  }
-
-  /*
-   * ---------------------------------------------------------
-   * ATOMIC PAYMENT CLAIM
-   * ---------------------------------------------------------
-   *
-   * Only ONE verification request can change this payment
-   * from INITIATED/PENDING → PAID.
-   *
-   * If two browser requests arrive simultaneously:
-   *
-   * Request A → updates 1 row
-   * Request B → updates 0 rows
-   *
-   * Request B then simply returns the already-confirmed booking.
-   *
-   * This avoids the previous PostgreSQL deadlock.
-   */
-  const claimedPayment =
-    await prisma.payment.updateMany({
-      where: {
-        id: payment.id,
-
-        status: {
-          in: [
-            PaymentStatus.INITIATED,
-            PaymentStatus.PENDING,
-          ],
-        },
-      },
-
-      data: {
-        status:
-          PaymentStatus.PAID,
-
-        paidAt:
-          new Date(),
-
-        gatewayResponse:
-          gatewayResponse as Prisma.InputJsonValue,
-      },
-    });
-
-  /*
-   * Another request won the payment update.
-   *
-   * Do not try to update the payment again.
-   */
-  if (claimedPayment.count === 0) {
-    const current =
-      await prisma.payment.findUnique({
-        where: {
-          id: payment.id,
-        },
-
-        include: {
-          booking: true,
-        },
-      });
-
-    if (
-      current?.status ===
-        PaymentStatus.PAID &&
-      current.booking.paymentStatus ===
-        PaymentStatus.PAID
-    ) {
-      const confirmed =
-        await getBooking(
-          current.bookingId,
-        );
-
-      if (!confirmed) {
-        throw new Error(
-          "Booking not found.",
-        );
-      }
-
-      return confirmed;
+    if (payment.status === PaymentStatus.PAID && booking.paymentStatus === PaymentStatus.PAID) {
+      await queueBookingReceipts(tx, booking.id);
+      return booking.id;
     }
-
-    /*
-     * The payment changed unexpectedly.
-     */
-    throw new Error(
-      "This payment is already being processed. Please wait a moment and try again.",
-    );
-  }
-
-  /*
-   * We successfully claimed the payment.
-   *
-   * Now confirm the booking.
-   */
-  await prisma.booking.update({
-    where: {
-      id: booking.id,
-    },
-
-    data: {
-      paymentStatus:
-        PaymentStatus.PAID,
-
-      bookingStatus:
-        BookingStatus.CONFIRMED,
-    },
-  });
-
-  /*
-   * Convert any legacy hold.
-   */
-  if (booking.holdId) {
-    await prisma.bookingHold.update({
-      where: {
-        id: booking.holdId,
-      },
-
-      data: {
-        status:
-          HoldStatus.CONVERTED,
-      },
-    });
-  }
-
-  /*
-   * Return complete booking.
-   */
-  const confirmed =
-    await getBooking(
-      booking.id,
-    );
-
-  if (!confirmed) {
-    throw new Error(
-      "Unable to load confirmed booking.",
-    );
-  }
-
+    if (booking.bookingStatus === BookingStatus.CANCELLED || booking.paymentStatus === PaymentStatus.PAID ||
+        (payment.status !== PaymentStatus.INITIATED && payment.status !== PaymentStatus.PENDING)) {
+      throw new Error("This booking or payment cannot be confirmed. Contact Rahat with your payment reference.");
+    }
+    if (!await isApartmentAvailable(booking.apartmentId, booking.checkIn, booking.checkOut, tx, booking.id, booking.holdId ?? undefined)) {
+      throw new Error("The apartment is no longer available. Contact Rahat with your payment reference for assistance.");
+    }
+    const paidAt = transaction.paid_at ? new Date(transaction.paid_at) : new Date();
+    if (Number.isNaN(paidAt.getTime())) throw new Error("Invalid payment timestamp.");
+    await tx.payment.update({ where: { id: payment.id }, data: {
+      status: PaymentStatus.PAID, paidAt, gatewayResponse: gatewayResponse as Prisma.InputJsonValue,
+    } });
+    await tx.booking.update({ where: { id: booking.id }, data: {
+      paymentStatus: PaymentStatus.PAID, bookingStatus: BookingStatus.CONFIRMED,
+    } });
+    if (booking.holdId) await tx.bookingHold.update({ where: { id: booking.holdId }, data: { status: HoldStatus.CONVERTED } });
+    await queueBookingReceipts(tx, booking.id);
+    return booking.id;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 15_000 });
+  await deliverBookingReceipts(bookingId);
+  const confirmed = await getBooking(bookingId);
+  if (!confirmed) throw new Error("Unable to load confirmed booking.");
   return confirmed;
 }
 
@@ -587,79 +361,29 @@ export async function confirmBookingPayment(
 
 export async function markPaymentFailed(
   reference: string,
-  status: PaymentStatus =
-    PaymentStatus.FAILED,
+  status: PaymentStatus = PaymentStatus.FAILED,
 ) {
-  const payment =
-    await prisma.payment.findUnique({
-      where: {
-        reference,
-      },
-
-      include: {
-        booking: {
-          include: {
-            hold: true,
-          },
-        },
-      },
-    });
-
-  if (!payment) {
-    return null;
+  if (status !== PaymentStatus.FAILED && status !== PaymentStatus.CANCELLED) {
+    throw new Error("Invalid failed-payment status.");
   }
-
-  /*
-   * Never turn a successful payment into a failed payment.
-   */
-  if (
-    payment.status ===
-    PaymentStatus.PAID
-  ) {
-    return payment.booking;
-  }
-
-  await prisma.payment.update({
-    where: {
-      id: payment.id,
-    },
-
-    data: {
-      status,
-    },
-  });
-
-  /*
-   * Release legacy holds.
-   */
-  if (payment.booking.holdId) {
-    await prisma.bookingHold.update({
-      where: {
-        id: payment.booking.holdId,
-      },
-
-      data: {
-        status:
-          HoldStatus.RELEASED,
-      },
-    });
-  }
-
-  return prisma.booking.update({
-    where: {
-      id: payment.bookingId,
-    },
-
-    data: {
+  return prisma.$transaction(async (tx) => {
+    const initial = await tx.payment.findUnique({ where: { reference }, include: { booking: true } });
+    if (!initial) return null;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${initial.booking.apartmentId}))`;
+    const payment = await tx.payment.findUniqueOrThrow({ where: { reference }, include: { booking: true } });
+    // Late failure events, including from another attempt, cannot downgrade a paid booking.
+    if (payment.status === PaymentStatus.PAID || payment.booking.paymentStatus === PaymentStatus.PAID) {
+      return payment.booking;
+    }
+    await tx.payment.update({ where: { id: payment.id }, data: { status } });
+    if (payment.booking.holdId) {
+      await tx.bookingHold.update({ where: { id: payment.booking.holdId }, data: { status: HoldStatus.RELEASED } });
+    }
+    return tx.booking.update({ where: { id: payment.bookingId }, data: {
       paymentStatus: status,
-
-      bookingStatus:
-        status ===
-        PaymentStatus.CANCELLED
-          ? BookingStatus.CANCELLED
-          : BookingStatus.PENDING,
-    },
-  });
+      bookingStatus: status === PaymentStatus.CANCELLED ? BookingStatus.CANCELLED : payment.booking.bookingStatus,
+    } });
+  }, { timeout: 15_000 });
 }
 
 /* =========================================================

@@ -114,6 +114,7 @@ model Booking {
   arrivalTime     String?
 
   subtotal    Int
+  cautionFee  Int @default(0)
   cleaningFee Int
   serviceFee  Int
   taxes       Int @default(0)
@@ -205,4 +206,24 @@ model BlockedDate {
   apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
 
   @@index([apartmentId, startDate, endDate])
+}
+
+// Immutable email payloads are queued in the same transaction as payment confirmation.
+model BookingEmail {
+  id           String   @id @default(cuid())
+  bookingId    String
+  kind         String
+  payload      Json
+  attempts     Int      @default(0)
+  nextAttemptAt DateTime @default(now())
+  lockedUntil  DateTime?
+  lockToken    String?
+  firstAttemptAt DateTime?
+  sentAt       DateTime?
+  providerId   String?
+  lastError    String?
+  createdAt    DateTime @default(now())
+
+  @@unique([bookingId, kind])
+  @@index([sentAt, nextAttemptAt])
 }

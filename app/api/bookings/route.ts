@@ -14,6 +14,7 @@ const createBookingSchema = z.object({
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guests: z.number().int().min(1),
+  expectedTotal: z.number().int().positive().optional(),
   guestName: z.string().trim().min(2).max(120),
   guestEmail: z.string().trim().email().max(200),
   guestPhone: z
