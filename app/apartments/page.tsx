@@ -7,6 +7,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDown,
@@ -82,7 +84,7 @@ function ResidenceCard({
   apartment: (typeof apartments)[number];
   index: number;
 }) {
-  const image = imageFor(index);
+  const image = (apartment.slug === "rahat" || apartment.slug === "alexa" || apartment.slug === "sunita" || apartment.slug === "monica" || apartment.slug === "theresa" || apartment.slug === "caesar" || apartment.slug === "irene" || apartment.slug === "pablo" || apartment.slug === "ragnar" || apartment.slug === "mafia") ? apartment.images[0] : imageFor(index);
   const price = apartmentPrice(apartment);
   const description = apartmentDescription(apartment);
 
@@ -239,8 +241,8 @@ export default function Apartments() {
             }}
             className="absolute inset-0"
           >
-            <img
-              src="/images/gallery/r1.jpeg"
+            <ResponsiveApartmentImage
+              image={siteImages["apartments-1"]}
               alt="Rahat Luxury Apartment"
               className="h-full w-full object-cover object-center"
             />
@@ -537,8 +539,8 @@ export default function Apartments() {
       <section className="relative z-20 bg-black text-white">
         <div className="grid min-h-[80svh] lg:grid-cols-2">
           <div className="relative min-h-[55vh] overflow-hidden lg:min-h-[80svh]">
-            <img
-              src="/images/gallery/r3.jpeg"
+            <ResponsiveApartmentImage
+              image={siteImages["apartments-2"]}
               alt="Rahat interior"
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -668,8 +670,8 @@ export default function Apartments() {
           LOCATION / FINAL CTA
       ===================================================== */}
       <section className="relative z-20 min-h-[90svh] overflow-hidden bg-black">
-        <img
-          src="/images/gallery/r6.jpeg"
+        <ResponsiveApartmentImage
+          image={siteImages["apartments-3"]}
           alt="Rahat Luxury Apartment"
           className="absolute inset-0 h-full w-full object-cover"
         />

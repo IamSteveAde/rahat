@@ -1,3 +1,5 @@
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { CAUTION_REFUND_NOTE } from "@/lib/payment-policy";
 import Link from "next/link";
 import {
@@ -127,8 +129,8 @@ export default async function Confirmation({
 
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <img
-  src={primaryImage}
+          <ResponsiveApartmentImage
+  image={siteImages["confirmation-hero"]}
   alt={apartment.name}
   className="h-full w-full object-cover opacity-40"
 />

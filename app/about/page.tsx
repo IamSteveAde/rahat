@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { motion } from "framer-motion";
 import { ArrowDown, ArrowRight, MapPin, Sparkles } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -31,8 +33,8 @@ export default function Page() {
       {/* HERO */}
       <section className="relative min-h-[92svh] overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src="/images/gallery/r3.jpeg"
+          <ResponsiveApartmentImage
+            image={siteImages["about-1"]}
             alt="Rahat Luxury Apartment"
             className="h-full w-full object-cover"
           />
@@ -156,8 +158,8 @@ export default function Page() {
           </div>
 
           <div className="group relative min-h-[520px] overflow-hidden rounded-[2rem]">
-            <img
-              src="/images/gallery/r1.jpeg"
+            <ResponsiveApartmentImage
+              image={siteImages["about-2"]}
               alt="Rahat interior"
               className="absolute inset-0 h-full w-full object-cover transition duration-1000 group-hover:scale-105"
             />
@@ -258,8 +260,8 @@ export default function Page() {
 
       {/* CTA */}
       <section className="relative min-h-[70vh] overflow-hidden">
-        <img
-          src="/images/gallery/r2.jpeg"
+        <ResponsiveApartmentImage
+          image={siteImages["about-3"]}
           alt="Rahat Luxury Apartment"
           className="absolute inset-0 h-full w-full object-cover"
         />

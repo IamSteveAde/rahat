@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import {
   ArrowRight,
   Check,
@@ -64,8 +66,8 @@ export default function ContactPage() {
       ========================================================= */}
       <section className="relative min-h-[78svh] overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <img
-            src="/images/gallery/r3.jpeg"
+          <ResponsiveApartmentImage
+            image={siteImages["contact-1"]}
             alt="Rahat Luxury Apartment"
             className="h-full w-full object-cover"
           />
@@ -211,8 +213,8 @@ export default function ContactPage() {
           {/* Left information */}
           <div className="relative overflow-hidden bg-black px-5 py-16 text-white sm:px-8 sm:py-20 lg:px-12 lg:py-24">
             <div className="absolute inset-0">
-              <img
-                src="/images/gallery/r6.jpeg"
+              <ResponsiveApartmentImage
+                image={siteImages["contact-2"]}
                 alt=""
                 className="h-full w-full object-cover opacity-25"
               />

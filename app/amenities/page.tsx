@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDown,
@@ -221,7 +223,7 @@ export default function Amenities() {
 
         <div className="absolute inset-0 overflow-hidden">
 
-          <video
+          <ResponsiveApartmentImage image={siteImages["amenities-1"]} alt="Rahat apartment interior"
             className="
               absolute
               inset-0
@@ -229,18 +231,8 @@ export default function Amenities() {
               w-full
               object-cover
             "
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
             aria-hidden="true"
-          >
-            <source
-              src="/images/gallery/hero1.mp4"
-              type="video/mp4"
-            />
-          </video>
+           />
 
           {/* Cinematic treatment */}
           <div className="absolute inset-0 bg-black/35" />
@@ -596,7 +588,7 @@ export default function Amenities() {
 
           <div className="relative min-h-[520px] overflow-hidden lg:min-h-[760px]">
 
-            <motion.img
+            <ResponsiveApartmentImage
               initial={{
                 scale: 1.08,
               }}
@@ -610,7 +602,7 @@ export default function Amenities() {
                 duration: 1.8,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              src="/images/gallery/r1.jpeg"
+              image={siteImages["amenities-3"]}
               alt="Rahat Luxury Apartment interior"
               className="
                 absolute
@@ -1194,7 +1186,7 @@ export default function Amenities() {
 
           <div className="relative min-h-[600px] overflow-hidden">
 
-            <motion.img
+            <ResponsiveApartmentImage
               initial={{
                 scale: 1.08,
               }}
@@ -1207,7 +1199,7 @@ export default function Amenities() {
               transition={{
                 duration: 1.8,
               }}
-              src="/images/gallery/r4.jpeg"
+              image={siteImages["amenities-4"]}
               alt="Rahat apartment"
               className="
                 absolute
@@ -1434,7 +1426,7 @@ export default function Amenities() {
 
       <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden bg-black text-white">
 
-        <video
+        <ResponsiveApartmentImage image={siteImages["amenities-2"]} alt="Rahat apartment interior"
           className="
             absolute
             inset-0
@@ -1442,18 +1434,8 @@ export default function Amenities() {
             w-full
             object-cover
           "
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
           aria-hidden="true"
-        >
-          <source
-            src="/images/gallery/hero1.mp4"
-            type="video/mp4"
-          />
-        </video>
+         />
 
         <div className="absolute inset-0 bg-black/55" />
 

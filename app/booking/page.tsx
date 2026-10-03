@@ -1,3 +1,5 @@
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { Suspense } from "react";
 import { BookingFlow } from "@/components/booking/BookingFlow";
 
@@ -5,8 +7,8 @@ function BookingHero() {
   return (
     <section className="relative isolate overflow-hidden bg-black text-white">
       <div className="relative h-[48svh] min-h-[420px] max-h-[680px]">
-        <img
-          src="/images/gallery/r4.jpeg"
+        <ResponsiveApartmentImage
+          image={siteImages["booking-hero"]}
           alt="Rahat Luxury Apartment"
           className="absolute inset-0 h-full w-full object-cover"
         />

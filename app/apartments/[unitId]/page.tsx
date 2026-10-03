@@ -7,6 +7,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { apartmentBackgrounds } from "@/lib/site-images";
 import { notFound } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -22,7 +24,7 @@ import {
 import { apartments, getApartment, formatNaira } from "@/lib/data";
 import { Navbar } from "@/components/layout/Navbar";
 
-const galleryImages = [
+const defaultGalleryImages = [
   "/images/gallery/r1.jpeg",
   "/images/gallery/r2.jpeg",
   "/images/gallery/r3.jpeg",
@@ -38,6 +40,8 @@ export default function Apartment({
   const a = getApartment(params.unitId);
 
   if (!a) return notFound();
+
+  const galleryImages = (a.slug === "rahat" || a.slug === "alexa" || a.slug === "sunita" || a.slug === "monica" || a.slug === "theresa" || a.slug === "caesar" || a.slug === "irene" || a.slug === "pablo" || a.slug === "ragnar" || a.slug === "mafia") ? a.images : defaultGalleryImages;
 
   const [selectedImage, setSelectedImage] = useState(0);
 
@@ -468,8 +472,8 @@ export default function Apartment({
 ===================================================== */}
 <section className="relative z-20 overflow-hidden bg-black">
   <div className="relative h-[58svh] min-h-[460px] max-h-[760px] sm:h-[62svh]">
-    <img
-      src="/images/gallery/r5.jpeg"
+    <ResponsiveApartmentImage
+      image={apartmentBackgrounds[a.slug]}
       alt="Rahat Luxury Apartment atmosphere"
       className="absolute inset-0 h-full w-full object-cover object-center"
     />
@@ -549,7 +553,9 @@ export default function Apartment({
                 .filter((room) => room.id !== a.id)
                 .map((room, index) => {
                   const roomImage =
-                    galleryImages[index % galleryImages.length];
+                    (room.slug === "rahat" || room.slug === "alexa" || room.slug === "sunita" || room.slug === "monica" || room.slug === "theresa" || room.slug === "caesar")
+                      ? room.images[0]
+                      : defaultGalleryImages[index % defaultGalleryImages.length];
 
                   return (
                     <Link

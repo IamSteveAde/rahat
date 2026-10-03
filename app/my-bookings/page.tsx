@@ -1,3 +1,5 @@
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { createHash } from "crypto";
@@ -178,8 +180,8 @@ let bookings: BookingWithDetails[] = [];
 
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <img
-            src="/images/gallery/r4.jpeg"
+          <ResponsiveApartmentImage
+            image={siteImages["my-bookings-hero"]}
             alt=""
             className="h-full w-full object-cover opacity-35"
           />
@@ -706,8 +708,8 @@ let bookings: BookingWithDetails[] = [];
 
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <img
-            src="/images/gallery/r6.jpeg"
+          <ResponsiveApartmentImage
+            image={siteImages["my-bookings-cta"]}
             alt=""
             className="h-full w-full object-cover opacity-30"
           />

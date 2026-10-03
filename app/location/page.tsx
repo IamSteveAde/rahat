@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { motion } from "framer-motion";
 import {
   ArrowDown,
@@ -49,8 +51,8 @@ export default function Location() {
       {/* HERO */}
       <section className="relative min-h-[92svh] overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src="/images/gallery/r6.jpeg"
+          <ResponsiveApartmentImage
+            image={siteImages["location-1"]}
             alt="Rahat Luxury Apartment surroundings"
             className="h-full w-full object-cover"
           />
@@ -156,8 +158,8 @@ export default function Location() {
       <section className="bg-white px-5 py-5 lg:px-10">
         <div className="mx-auto grid max-w-[1400px] gap-5 lg:grid-cols-[1.5fr_.8fr]">
           <div className="group relative min-h-[550px] overflow-hidden rounded-[2rem]">
-            <img
-              src="/images/gallery/r4.jpeg"
+            <ResponsiveApartmentImage
+              image={siteImages["location-2"]}
               alt="Rahat Luxury Apartment interior"
               className="absolute inset-0 h-full w-full object-cover transition duration-1000 group-hover:scale-105"
             />
@@ -297,8 +299,8 @@ export default function Location() {
 
       {/* FINAL IMAGE */}
       <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
-        <img
-          src="/images/gallery/r5.jpeg"
+        <ResponsiveApartmentImage
+          image={siteImages["location-3"]}
           alt="Rahat Luxury Apartment"
           className="absolute inset-0 h-full w-full object-cover"
         />

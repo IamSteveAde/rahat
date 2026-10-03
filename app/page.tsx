@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import { motion } from "framer-motion";
 import {
   ArrowDown,
@@ -20,19 +22,19 @@ const apartments = [
     id: "monica",
     name: "Monica",
     type: "1 Bedroom Apartment",
-    image: "/images/gallery/r3.jpeg",
+    image: "/images/monica/1.jpg",
   },
   {
     id: "ragnar",
     name: "Ragnar",
     type: "1 Bedroom Apartment",
-    image: "/images/gallery/r6.jpeg",
+    image: "/images/ragnar/8.jpg",
   },
   {
     id: "alexa",
     name: "Alexa",
     type: "2 Bedroom Apartment",
-    image: "/images/gallery/r1.jpeg",
+    image: "/images/alexa/7.jpg",
   },
 ];
 
@@ -42,7 +44,7 @@ const apartments = [
 
 const experienceSlides = [
   {
-    image: "/images/gallery/r1.jpeg",
+    image: siteImages["experience-1"],
     number: "01",
     title: "Space to",
     accent: "breathe.",
@@ -50,7 +52,7 @@ const experienceSlides = [
       "Interiors designed with intention, giving you the freedom to slow down, settle in and make the space your own.",
   },
   {
-    image: "/images/gallery/r2.jpeg",
+    image: siteImages["experience-2"],
     number: "02",
     title: "Comfort,",
     accent: "elevated.",
@@ -58,7 +60,7 @@ const experienceSlides = [
       "Thoughtful details, refined interiors and everything you need for a stay that feels effortless from the moment you arrive.",
   },
   {
-    image: "/images/gallery/r3.jpeg",
+    image: siteImages["experience-3"],
     number: "03",
     title: "A place to",
     accent: "unwind.",
@@ -66,7 +68,7 @@ const experienceSlides = [
       "Quiet mornings, intimate evenings and the freedom to experience Lagos entirely on your own terms.",
   },
   {
-    image: "/images/gallery/r4.jpeg",
+    image: siteImages["experience-4"],
     number: "04",
     title: "Designed for",
     accent: "living.",
@@ -74,7 +76,7 @@ const experienceSlides = [
       "More than somewhere to sleep. A beautifully considered environment for working, relaxing, entertaining and simply being.",
   },
   {
-    image: "/images/gallery/r5.jpeg",
+    image: siteImages["experience-5"],
     number: "05",
     title: "Your own",
     accent: "retreat.",
@@ -82,7 +84,7 @@ const experienceSlides = [
       "Privacy and space come together to create a residence that feels distinctly yours, even if only for a few nights.",
   },
   {
-    image: "/images/gallery/r6.jpeg",
+    image: siteImages["experience-6"],
     number: "06",
     title: "Stay a little",
     accent: "differently.",
@@ -115,7 +117,7 @@ export default function HomePage() {
 
         <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
 
-          <motion.video
+          <ResponsiveApartmentImage image={siteImages["home-3"]} alt="Rahat apartment interior"
             initial={{ scale: 1.08 }}
             animate={{ scale: 1 }}
             transition={{
@@ -123,18 +125,8 @@ export default function HomePage() {
               ease: [0.22, 1, 0.36, 1],
             }}
             className="absolute inset-0 h-full w-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
             aria-hidden="true"
-          >
-            <source
-              src="/images/gallery/hero1.mp4"
-              type="video/mp4"
-            />
-          </motion.video>
+           />
 
           {/* General overlay */}
           <div className="absolute inset-0 bg-black/20" />
@@ -1022,8 +1014,8 @@ export default function HomePage() {
                   bg-black
                 "
               >
-                <img
-                  src="/images/gallery/r5.jpeg"
+                <ResponsiveApartmentImage
+                  image={siteImages["home-1"]}
                   alt="Rahat luxury interior"
                   className="
                     h-full
@@ -1336,8 +1328,8 @@ export default function HomePage() {
                   bg-[#171614]
                 "
               >
-                <img
-                  src="/images/gallery/r6.jpeg"
+                <ResponsiveApartmentImage
+                  image={siteImages["home-2"]}
                   alt="Rahat Luxury Apartment"
                   className="
                     h-full
@@ -1509,7 +1501,7 @@ export default function HomePage() {
         "
       >
 
-        <video
+        <ResponsiveApartmentImage image={siteImages["home-4"]} alt="Rahat apartment interior"
           className="
             absolute
             inset-0
@@ -1517,18 +1509,8 @@ export default function HomePage() {
             w-full
             object-cover
           "
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
           aria-hidden="true"
-        >
-          <source
-            src="/images/gallery/hero1.mp4"
-            type="video/mp4"
-          />
-        </video>
+         />
 
         <div className="absolute inset-0 bg-black/50" />
 
@@ -1757,7 +1739,7 @@ function ExperienceSlideshow() {
 
           {experienceSlides.map((item, index) => (
             <motion.div
-              key={item.image}
+              key={item.image.desktop}
               initial={false}
               animate={{
                 opacity:
@@ -1777,8 +1759,8 @@ function ExperienceSlideshow() {
               }}
               className="absolute inset-0"
             >
-              <img
-                src={item.image}
+              <ResponsiveApartmentImage
+                image={item.image}
                 alt=""
                 className="
                   h-full
@@ -1991,7 +1973,7 @@ function ExperienceSlideshow() {
 
             {experienceSlides.map((item, index) => (
               <button
-                key={item.image}
+                key={item.image.desktop}
                 type="button"
                 onClick={() => goToSlide(index)}
                 aria-label={`Go to slide ${index + 1}`}

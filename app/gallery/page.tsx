@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
+import { siteImages } from "@/lib/site-images";
 import {
   ArrowDown,
   ArrowLeft,
@@ -10,50 +12,13 @@ import {
   ArrowUpRight,
   X,
 } from "lucide-react";
+import { galleryImages } from "@/lib/gallery-images";
 import { Navbar } from "@/components/layout/Navbar";
 
 /* =========================================================
    GALLERY DATA
 ========================================================= */
 
-const galleryImages = [
-  {
-    src: "/images/gallery/r1.jpeg",
-    title: "The arrival",
-    category: "Spaces",
-    number: "01",
-  },
-  {
-    src: "/images/gallery/r2.jpeg",
-    title: "Quiet luxury",
-    category: "Interiors",
-    number: "02",
-  },
-  {
-    src: "/images/gallery/r3.jpeg",
-    title: "Made to linger",
-    category: "Living",
-    number: "03",
-  },
-  {
-    src: "/images/gallery/r4.jpeg",
-    title: "A different light",
-    category: "Interiors",
-    number: "04",
-  },
-  {
-    src: "/images/gallery/r5.jpeg",
-    title: "Your private retreat",
-    category: "Spaces",
-    number: "05",
-  },
-  {
-    src: "/images/gallery/r6.jpeg",
-    title: "Stay beautifully",
-    category: "Living",
-    number: "06",
-  },
-];
 
 const categories = [
   "All",
@@ -153,7 +118,7 @@ export default function Gallery() {
 
         <div className="absolute inset-0">
 
-          <video
+          <ResponsiveApartmentImage image={siteImages["gallery-1"]} alt="Rahat apartment interior"
             className="
               absolute
               inset-0
@@ -161,18 +126,8 @@ export default function Gallery() {
               w-full
               object-cover
             "
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
             aria-hidden="true"
-          >
-            <source
-              src="/images/gallery/hero1.mp4"
-              type="video/mp4"
-            />
-          </video>
+           />
 
           <div className="absolute inset-0 bg-black/35" />
 
@@ -886,7 +841,7 @@ export default function Gallery() {
 
           <div className="relative min-h-[550px] overflow-hidden">
 
-            <motion.img
+            <ResponsiveApartmentImage
               initial={{
                 scale: 1.08,
               }}
@@ -899,7 +854,7 @@ export default function Gallery() {
               transition={{
                 duration: 1.8,
               }}
-              src="/images/gallery/r5.jpeg"
+              image={siteImages["gallery-3"]}
               alt="Rahat interior"
               className="
                 absolute
@@ -968,7 +923,7 @@ export default function Gallery() {
 
       <section className="relative flex min-h-[75vh] items-center justify-center overflow-hidden bg-black text-white">
 
-        <video
+        <ResponsiveApartmentImage image={siteImages["gallery-2"]} alt="Rahat apartment interior"
           className="
             absolute
             inset-0
@@ -976,18 +931,8 @@ export default function Gallery() {
             w-full
             object-cover
           "
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
           aria-hidden="true"
-        >
-          <source
-            src="/images/gallery/hero1.mp4"
-            type="video/mp4"
-          />
-        </video>
+         />
 
         <div className="absolute inset-0 bg-black/55" />
 
