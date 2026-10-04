@@ -1,4 +1,4 @@
-// Dedicated gallery photos; excluded from backgrounds and apartment galleries.
+// Photos featured in the site gallery; also available in their apartment galleries.
 export const galleryImages = [
   { src: "/images/sunita/4.jpg", title: "Sunita — a private space", category: "Spaces", number: "01" },
   { src: "/images/theresa/2.jpg", title: "Theresa — interior details", category: "Interiors", number: "02" },

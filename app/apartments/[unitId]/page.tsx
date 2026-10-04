@@ -9,6 +9,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
 import { apartmentBackgrounds } from "@/lib/site-images";
+import { apartmentVideos } from "@/lib/apartment-videos";
+import { ApartmentVideo } from "@/components/media/ApartmentVideo";
 import { notFound } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -195,6 +197,34 @@ export default function Apartment({
       {/* =====================================================
           PRODUCT / BOOKING AREA
       ===================================================== */}
+      {apartmentVideos[a.slug] && (
+        <section
+          aria-labelledby="apartment-video-heading"
+          className="min-w-0 px-4 pb-12 sm:px-6 sm:pb-16 md:px-8 lg:px-12"
+        >
+          <div className="mx-auto min-w-0 max-w-[1440px] border-t border-black/10 pt-7 sm:pt-10">
+            <p className="text-[9px] uppercase tracking-[0.24em] text-[#8A6E3F]">
+              Explore the residence
+            </p>
+            <h2
+              id="apartment-video-heading"
+              className="display mt-3 text-3xl font-light tracking-[-0.03em] sm:text-4xl"
+            >
+              A closer look at {a.name}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-black/50">
+              Watch the video tour to explore the apartment before your stay.
+            </p>
+            <ApartmentVideo
+              key={a.slug}
+              src={apartmentVideos[a.slug]!}
+              poster={a.images[0]}
+              name={a.name}
+            />
+          </div>
+        </section>
+      )}
+
       <section className="min-w-0 px-4 pb-20 sm:px-6 sm:pb-24 md:px-8 lg:px-12 lg:pb-32">
         <div className="mx-auto grid min-w-0 max-w-[1440px] gap-12 md:gap-14 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-16 xl:gap-20">
           {/* =================================================

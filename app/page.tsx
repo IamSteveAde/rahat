@@ -117,16 +117,17 @@ export default function HomePage() {
 
         <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
 
-          <ResponsiveApartmentImage image={siteImages["home-3"]} alt="Rahat apartment interior"
-            initial={{ scale: 1.08 }}
-            animate={{ scale: 1 }}
-            transition={{
-              duration: 2.2,
-              ease: [0.22, 1, 0.36, 1],
-            }}
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster={siteImages["home-3"].desktop}
             className="absolute inset-0 h-full w-full object-cover"
             aria-hidden="true"
-           />
+          >
+            <source src="/images/IMG_8650.mp4" type="video/mp4" />
+          </video>
 
           {/* General overlay */}
           <div className="absolute inset-0 bg-black/20" />
