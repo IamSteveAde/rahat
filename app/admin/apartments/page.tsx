@@ -11,7 +11,6 @@ import {
   Check,
   CheckCircle2,
   Clock3,
-  CreditCard,
   Loader2,
   Mail,
   Phone,
@@ -94,7 +93,7 @@ export default function ApartmentsPage() {
   const [specialRequests, setSpecialRequests] = useState("");
 
   const [paymentMode, setPaymentMode] =
-    useState<"PENDING" | "PAID" | null>(null);
+    useState<"PAID" | null>(null);
 
   const [apartments, setApartments] = useState<
     AvailableApartment[]
@@ -228,7 +227,7 @@ export default function ApartmentsPage() {
     }
 
     if (!paymentMode) {
-      setError("Select a payment status before confirming the booking.");
+      setError("Confirm that full payment has been received before creating the booking.");
       return;
     }
 
@@ -701,42 +700,22 @@ export default function ApartmentsPage() {
                   </dl>
                   <p className="mt-3 text-[11px] leading-5 text-white/60">{CAUTION_REFUND_NOTE}</p>
                   <fieldset disabled={submitting} className="mt-5 border-t border-white/15 pt-4">
-                    <legend className="px-1 text-xs font-semibold">Payment status · Required</legend>
-                    <p className="mb-3 text-xs leading-5 text-white/60">
-                      Select whether the customer still needs to pay or the full amount has been received.
-                    </p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {([
-                        { value: "PENDING", label: "Payment pending", detail: "Customer pays later", icon: CreditCard },
-                        { value: "PAID", label: "Paid manually", detail: "Full amount received by cash / transfer", icon: Check },
-                      ] as const).map(({ value, label, detail, icon: Icon }) => (
-                        <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition focus-within:ring-2 focus-within:ring-[#c9a96a] ${
-                          paymentMode === value
-                            ? "border-[#c9a96a] bg-[#c9a96a]/10"
-                            : "border-white/15 bg-white/5 hover:border-white/40"
-                        }`}>
-                          <input
-                            type="radio"
-                            name="paymentStatus"
-                            value={value}
-                            checked={paymentMode === value}
-                            onChange={() => setPaymentMode(value)}
-                            required
-                            className="mt-0.5 accent-[#c9a96a]"
-                          />
-                          <span>
-                            <span className="flex items-center gap-2 text-xs font-semibold"><Icon size={14} />{label}</span>
-                            <span className="mt-1 block text-[11px] leading-4 text-white/60">{detail}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    <p aria-live="polite" className="mt-3 text-xs text-[#c9a96a]">
-                      {paymentMode === "PAID"
-                        ? "The booking will be recorded as fully paid."
-                        : paymentMode === "PENDING"
-                          ? "The reservation will be confirmed with payment pending."
-                          : "Choose a payment status to enable confirmation."}
+                    <legend className="px-1 text-xs font-semibold">Payment status · Paid only</legend>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#c9a96a] bg-[#c9a96a]/10 p-3 focus-within:ring-2 focus-within:ring-[#c9a96a]">
+                      <input
+                        type="checkbox"
+                        checked={paymentMode === "PAID"}
+                        onChange={(event) => setPaymentMode(event.target.checked ? "PAID" : null)}
+                        required
+                        className="mt-0.5 accent-[#c9a96a]"
+                      />
+                      <span>
+                        <span className="flex items-center gap-2 text-xs font-semibold"><Check size={14} />Paid</span>
+                        <span className="mt-1 block text-[11px] leading-4 text-white/60">I confirm the full amount has been received by cash or transfer.</span>
+                      </span>
+                    </label>
+                    <p className="mt-3 text-xs leading-5 text-white/60">
+                      Full payment is required to reserve. Creating the booking sends receipt emails to the customer and admin.
                     </p>
                   </fieldset>
 

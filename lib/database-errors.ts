@@ -6,10 +6,12 @@ export function publicDatabaseError(error: unknown) {
     return { status: 503, message: "Booking services are temporarily unavailable. Please try again shortly or contact Rahat for assistance." };
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    const unavailable = ["P1000", "P1001", "P1002", "P1008", "P1011", "P1017", "P2024"].includes(error.code);
+    const unavailable = ["P1000", "P1001", "P1002", "P1008", "P1011", "P1017", "P2024", "P2028"].includes(error.code);
     return {
       status: unavailable ? 503 : 500,
-      message: "We could not check availability right now. Please try again shortly or contact Rahat for assistance.",
+      message: unavailable
+        ? "Booking services are temporarily unavailable. Please try again shortly or contact Rahat for assistance."
+        : "We could not check availability right now. Please try again shortly or contact Rahat for assistance.",
     };
   }
   if (error instanceof Prisma.PrismaClientUnknownRequestError) {

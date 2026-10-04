@@ -8,6 +8,7 @@ import {
 
 import { queueBookingReceipts, deliverBookingReceipts } from "@/lib/booking-email";
 import { prisma } from "@/lib/prisma";
+import { publicDatabaseError } from "@/lib/database-errors";
 import {
   assertDateRange,
   isApartmentAvailable,
@@ -84,10 +85,12 @@ export async function POST(req: Request) {
       body.guests,
     );
 
-    const paymentMode =
-      body.paymentMode === "PAID"
-        ? "PAID"
-        : "PENDING";
+    if (body.paymentMode !== "PAID") {
+      return NextResponse.json(
+        { error: "Full payment must be confirmed before creating a booking." },
+        { status: 400 },
+      );
+    }
 
     if (!apartmentId) {
       return NextResponse.json(
@@ -229,18 +232,7 @@ export async function POST(req: Request) {
             throw new Error("The price has changed. Check availability again and review the updated total before confirming.");
           }
 
-          /*
-           * Admin-created reservations are confirmed
-           * immediately.
-           *
-           * If the customer has not paid yet:
-           *   booking = CONFIRMED
-           *   payment = PENDING
-           *
-           * If the customer has already paid manually:
-           *   booking = CONFIRMED
-           *   payment = PAID
-           */
+          // Admin reservations require full manual payment before confirmation.
           const createdBooking =
             await tx.booking.create({
               data: {
@@ -292,9 +284,7 @@ export async function POST(req: Request) {
                   BookingStatus.CONFIRMED,
 
                 paymentStatus:
-                  paymentMode === "PAID"
-                    ? PaymentStatus.PAID
-                    : PaymentStatus.PENDING,
+                  PaymentStatus.PAID,
 
                 holdId: null,
               },
@@ -308,52 +298,50 @@ export async function POST(req: Request) {
               },
             });
 
-          if (
-            paymentMode === "PAID"
-          ) {
-            await tx.payment.create({
-              data: {
-                bookingId:
-                  createdBooking.id,
+          await tx.payment.create({
+            data: {
+              bookingId:
+                createdBooking.id,
 
-                provider:
-                  PaymentProvider.MANUAL,
+              provider:
+                PaymentProvider.MANUAL,
 
-                reference:
-                  `MANUAL-${createdBooking.bookingReference}`,
+              reference:
+                `MANUAL-${createdBooking.bookingReference}`,
 
-                amount:
-                  createdBooking.total,
+              amount:
+                createdBooking.total,
 
-                currency: "NGN",
+              currency: "NGN",
 
-                status:
-                  PaymentStatus.PAID,
+              status:
+                PaymentStatus.PAID,
 
-                paidAt: new Date(),
+              paidAt: new Date(),
 
-                gatewayResponse:
-                  {
-                    source: "admin",
-                    method:
-                      "manual",
-                  } as Prisma.InputJsonValue,
-              },
-            });
-          }
+              gatewayResponse:
+                {
+                  source: "admin",
+                  method:
+                    "manual",
+                } as Prisma.InputJsonValue,
+            },
+          });
 
-          if (paymentMode === "PAID") await queueBookingReceipts(tx, createdBooking.id);
+          await queueBookingReceipts(tx, createdBooking.id);
           return createdBooking;
         },
         {
           isolationLevel:
             Prisma.TransactionIsolationLevel.ReadCommitted,
 
+          // Acquisition has a separate limit from transaction execution.
+          maxWait: 10_000,
           timeout: 15_000,
         },
       );
 
-    if (paymentMode === "PAID") await deliverBookingReceipts(booking.id);
+    await deliverBookingReceipts(booking.id);
     return NextResponse.json({
       success: true,
       booking,
@@ -363,6 +351,14 @@ export async function POST(req: Request) {
       "Admin booking creation error:",
       error,
     );
+
+    const databaseError = publicDatabaseError(error);
+    if (databaseError) {
+      return NextResponse.json(
+        { error: databaseError.message },
+        { status: databaseError.status },
+      );
+    }
 
     const message =
       error instanceof Error
