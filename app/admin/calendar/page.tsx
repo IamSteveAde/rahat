@@ -1,7 +1,7 @@
+import { calendarBookingFilter } from "@/lib/calendar-booking-policy";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { prisma } from "@/lib/prisma";
 import {
-  BookingStatus,
   HoldStatus,
 } from "@prisma/client";
 import CalendarView from "@/components/admin/CalendarView";
@@ -75,17 +75,13 @@ export default async function Calendar() {
 
         bookings: {
           where: {
-            removedAt: null,
+            ...calendarBookingFilter,
             checkIn: {
               lt: monthEnd,
             },
 
             checkOut: {
               gt: monthStart,
-            },
-
-            bookingStatus: {
-              not: BookingStatus.CANCELLED,
             },
           },
 

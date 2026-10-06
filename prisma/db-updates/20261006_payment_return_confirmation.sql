@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE "Booking" ADD COLUMN "paymentReturnedAt" TIMESTAMP(3);
+COMMIT;

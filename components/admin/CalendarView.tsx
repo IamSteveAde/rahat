@@ -361,6 +361,7 @@ function getCellStatus({
   const booking =
     apartment.bookings.find(
       (item) =>
+        item.paymentStatus === "PAID" &&
         item.bookingStatus !==
           "CANCELLED" &&
         isBetween(

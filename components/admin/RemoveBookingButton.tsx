@@ -30,17 +30,17 @@ export function RemoveBookingButton({ id, reference, guestName }: { id: string; 
   }
 
   return <>
-    <button type="button" aria-label={`Remove booking ${reference}`} className="rounded-lg px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50" onClick={() => { setConfirmation(""); setError(""); dialog.current?.showModal(); }}>Remove</button>
-    <dialog ref={dialog} aria-labelledby={`remove-title-${id}`} onCancel={(event) => { if (busy) event.preventDefault(); }} className="w-[calc(100%_-_2rem)] max-w-md rounded-2xl p-6 text-black shadow-xl backdrop:bg-black/50">
-      <h2 id={`remove-title-${id}`} className="text-lg font-semibold">Remove booking?</h2>
+    <button type="button" aria-label={`Remove booking ${reference}`} className="whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100" onClick={() => { setConfirmation(""); setError(""); dialog.current?.showModal(); }}>Remove booking</button>
+    <dialog ref={dialog} aria-labelledby={`remove-title-${id}`} aria-describedby={`remove-warning-${id}`} onCancel={(event) => { if (busy) event.preventDefault(); }} className="w-[calc(100%_-_2rem)] max-w-md rounded-2xl p-6 text-black shadow-xl backdrop:bg-black/50">
+      <h2 id={`remove-title-${id}`} className="text-lg font-semibold">Warning: remove this booking?</h2>
       <p className="mt-3 text-sm">{reference} · {guestName}</p>
-      <p className="mt-3 text-sm text-black/60">This will free the booked dates and move the booking to Removed bookings with a removal date and time. Payment records are retained. This does not issue a refund.</p>
+      <p id={`remove-warning-${id}`} className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-relaxed text-red-800">This will free the booked dates and move the booking to Removed bookings with a removal date and time. Its payment will be excluded from revenue immediately. Payment records are retained. After returning the payment, confirm it in Removed bookings.</p>
       <form onSubmit={remove}>
         <label className="mt-5 block text-sm" htmlFor={`confirm-${id}`}>Type <strong>{reference}</strong> to confirm</label>
         <input id={`confirm-${id}`} autoComplete="off" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} disabled={busy} className="mt-2 w-full rounded-lg border border-black/20 px-3 py-2" />
         {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
         <div className="mt-6 flex justify-end gap-3">
-          <button type="button" disabled={busy} onClick={() => dialog.current?.close()} className="rounded-lg border px-4 py-2 text-sm">Keep booking</button>
+          <button type="button" disabled={busy} onClick={() => dialog.current?.close()} className="rounded-lg border px-4 py-2 text-sm">Cancel — keep booking</button>
           <button type="submit" disabled={busy || confirmation.trim() !== reference} className="rounded-lg bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-40">{busy ? "Removing…" : "Remove booking"}</button>
         </div>
       </form>

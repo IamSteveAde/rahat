@@ -53,6 +53,7 @@ export default async function CustomersPage() {
         checkOut: true,
         bookingStatus: true,
         paymentStatus: true,
+        removedAt: true,
         createdAt: true,
 
         apartment: {
@@ -166,7 +167,7 @@ export default async function CustomersPage() {
     bookings.reduce(
       (total, booking) => {
         if (
-          booking.paymentStatus ===
+          !booking.removedAt && booking.paymentStatus ===
           PaymentStatus.PAID
         ) {
           return (
@@ -365,7 +366,7 @@ export default async function CustomersPage() {
                             booking,
                           ) => {
                             if (
-                              booking.paymentStatus ===
+                              !booking.removedAt && booking.paymentStatus ===
                               PaymentStatus.PAID
                             ) {
                               return (

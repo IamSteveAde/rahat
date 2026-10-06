@@ -1,7 +1,7 @@
+import { calendarBookingFilter } from "@/lib/calendar-booking-policy";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  BookingStatus,
   HoldStatus,
 } from "@prisma/client";
 
@@ -132,17 +132,13 @@ export async function GET(
 
           bookings: {
             where: {
-            removedAt: null,
+              ...calendarBookingFilter,
               checkIn: {
                 lt: monthEnd,
               },
 
               checkOut: {
                 gt: monthStart,
-              },
-
-              bookingStatus: {
-                not: BookingStatus.CANCELLED,
               },
             },
 

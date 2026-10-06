@@ -101,6 +101,7 @@ model Booking {
   bookingReference      String         @unique
   guestAccessTokenHash  String?        @unique
   removedAt             DateTime?
+  paymentReturnedAt     DateTime?
   userId                String?
   apartmentId            String
 

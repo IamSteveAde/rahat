@@ -759,7 +759,7 @@ export default async function Bookings({
                         Total
                       </th>
 
-                      <th className="w-10 px-4" />
+                      <th className="sticky right-0 bg-[#fafafa] px-4 py-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/35">Actions</th>
                     </tr>
                   </thead>
 
@@ -931,7 +931,7 @@ export default async function Bookings({
                           </td>
 
                           {/* ACTION */}
-                          <td className="px-4 py-5">
+                          <td className="sticky right-0 border-l border-black/[0.05] bg-white px-4 py-5">
                             <RemoveBookingButton id={booking.id} reference={booking.bookingReference} guestName={booking.guestName} />
                           </td>
                         </tr>

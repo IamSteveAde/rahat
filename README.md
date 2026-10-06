@@ -97,3 +97,16 @@ Before running this version against an existing database, apply the additive upd
 npx prisma db execute --file prisma/db-updates/20261006_removed_bookings.sql --schema prisma/schema.prisma
 npx prisma generate
 ```
+
+Admins can confirm a full payment return in Removed bookings after returning the money outside the app. Confirmation requires the booking reference and an explicit checkbox, records the confirmation time in WAT, and marks the booking and paid payment records REFUNDED. Dashboard paid revenue then excludes those refunded payments. Repeated confirmations preserve the original timestamp.
+
+Apply the additional timestamp field before running this version:
+
+```sh
+npx prisma db execute --file prisma/db-updates/20261006_payment_return_confirmation.sql --schema prisma/schema.prisma
+npx prisma generate
+```
+
+## Revenue
+
+Dashboard revenue counts PAID payments attached to bookings with no removal timestamp. Removing a booking immediately excludes its payments from revenue, even before an admin confirms the payment return. The dashboard provides selectable monthly and yearly totals alongside all-time revenue. Period boundaries use Lagos/WAT and the payment's paidAt timestamp (createdAt for older paid records without paidAt). The customer directory also excludes removed bookings from paid revenue and customer paid totals.

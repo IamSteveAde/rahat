@@ -1,8 +1,10 @@
+import { calendarBookingFilter } from "@/lib/calendar-booking-policy";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { prisma } from "@/lib/prisma";
 import {
   BookingStatus,
   HoldStatus,
+  PaymentStatus,
 } from "@prisma/client";
 import {
   CalendarDays,
@@ -78,6 +80,7 @@ function getCellStatus({
     checkIn: Date;
     checkOut: Date;
     bookingStatus: BookingStatus;
+    paymentStatus: PaymentStatus;
   }[];
   blocks: {
     startDate: Date;
@@ -92,6 +95,7 @@ function getCellStatus({
 }) {
   const booking = bookings.find(
     (item) =>
+      item.paymentStatus === PaymentStatus.PAID &&
       item.bookingStatus !==
         BookingStatus.CANCELLED &&
       isBetween(
@@ -183,20 +187,19 @@ export default async function AvailabilityPage() {
 
         bookings: {
           where: {
+            ...calendarBookingFilter,
             checkIn: {
               lt: endDate,
             },
             checkOut: {
               gt: today,
             },
-            bookingStatus: {
-              not: BookingStatus.CANCELLED,
-            },
           },
           select: {
             checkIn: true,
             checkOut: true,
             bookingStatus: true,
+            paymentStatus: true,
           },
         },
 
@@ -483,6 +486,7 @@ function ApartmentRow({
       checkIn: Date;
       checkOut: Date;
       bookingStatus: BookingStatus;
+      paymentStatus: PaymentStatus;
     }[];
     blocks: {
       startDate: Date;

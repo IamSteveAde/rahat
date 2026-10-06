@@ -103,10 +103,8 @@ export async function GET(req: Request) {
       holds,
     ] = await Promise.all([
       /*
-       * CONFIRMED and CHECKED_IN bookings are unavailable.
-       *
-       * PENDING bookings are only unavailable when their
-       * associated hold is still active.
+       * Only paid, confirmed or checked-in reservations count as bookings.
+       * Temporary holds are returned separately below.
        */
       prisma.booking.findMany({
         where: {
@@ -121,28 +119,10 @@ export async function GET(req: Request) {
             gt: monthStart,
           },
 
-          OR: [
-            {
-              bookingStatus: {
-                in: [
-                  BookingStatus.CONFIRMED,
-                  BookingStatus.CHECKED_IN,
-                ],
-              },
-            },
-
-            {
-              bookingStatus: BookingStatus.PENDING,
-
-              hold: {
-                status: HoldStatus.ACTIVE,
-
-                expiresAt: {
-                  gt: now,
-                },
-              },
-            },
-          ],
+          paymentStatus: "PAID",
+          bookingStatus: {
+            in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN],
+          },
         },
 
         select: {

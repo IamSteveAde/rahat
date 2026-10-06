@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin/AdminShell";
 import { prisma } from "@/lib/prisma";
-import { BookingStatus, PaymentStatus } from "@prisma/client";
+import { getRevenueTotals, revenuePeriods } from "@/lib/revenue";
+import { BookingStatus } from "@prisma/client";
 import { formatNaira } from "@/lib/data";
 import {
   CalendarCheck,
@@ -78,7 +79,7 @@ function getStatusLabel(status: BookingStatus) {
     );
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams?: { month?: string; year?: string } }) {
   const now = new Date();
 
   const todayStart = startOfDay(now);
@@ -151,24 +152,9 @@ export default async function Dashboard() {
     },
   });
 
-  /*
-   * Actual revenue from successful payments.
-   *
-   * We use Payment rather than demo booking totals so
-   * revenue represents money that has actually been paid.
-   */
-  const revenueResult =
-    await prisma.payment.aggregate({
-      _sum: {
-        amount: true,
-      },
-      where: {
-        status: PaymentStatus.PAID,
-      },
-    });
-
-  const totalRevenue =
-    revenueResult._sum.amount ?? 0;
+  const periods = revenuePeriods(searchParams?.month, searchParams?.year, now);
+  const revenue = await getRevenueTotals(periods);
+  const monthLabel = new Intl.DateTimeFormat("en-NG", { month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(periods.monthStart);
 
   /*
    * Total active inventory.
@@ -324,15 +310,27 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* PRIMARY METRICS */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section aria-label="Revenue" className="space-y-4">
+          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+            <div>
+              <h2 className="text-lg font-semibold">Revenue</h2>
+              <p className="mt-1 text-xs text-black/50">Paid payments only. Removed bookings and refunded payments are excluded. Periods use payment dates in Lagos time.</p>
+            </div>
+            <form action="/admin/dashboard" className="flex flex-wrap items-end gap-3">
+              <label className="text-xs font-medium">Month<input type="month" name="month" defaultValue={periods.month} min="2020-01" max="2100-12" className="mt-1 block rounded-lg border border-black/10 bg-white px-3 py-2 text-sm" /></label>
+              <label className="text-xs font-medium">Year<input type="number" name="year" defaultValue={periods.year} min="2020" max="2100" step="1" className="mt-1 block w-24 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm" /></label>
+              <button type="submit" className="rounded-lg bg-black px-4 py-2 text-sm text-white">View revenue</button>
+            </form>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <MetricCard label="Monthly revenue" value={formatNaira(revenue.monthly)} icon={TrendingUp} description={monthLabel} />
+            <MetricCard label="Yearly revenue" value={formatNaira(revenue.yearly)} icon={TrendingUp} description={String(periods.year)} />
+            <MetricCard label="All-time revenue" value={formatNaira(revenue.allTime)} icon={TrendingUp} description="All paid payments from bookings still on record" />
+          </div>
+        </section>
 
-          <MetricCard
-            label="Revenue"
-            value={formatNaira(totalRevenue)}
-            icon={TrendingUp}
-            description="Total successful payments"
-          />
+        {/* PRIMARY METRICS */}
+        <div className="grid gap-4 sm:grid-cols-3">
 
           <MetricCard
             label="Occupancy"
