@@ -100,6 +100,7 @@ model Booking {
   id                    String         @id @default(cuid())
   bookingReference      String         @unique
   guestAccessTokenHash  String?        @unique
+  removedAt             DateTime?
   userId                String?
   apartmentId            String
 
@@ -136,6 +137,7 @@ model Booking {
   updatedAt DateTime @updatedAt
 
   @@index([apartmentId, checkIn, checkOut])
+  @@index([removedAt])
   @@index([guestEmail])
   @@index([bookingStatus, paymentStatus])
 }

@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (booking.bookingStatus === "CANCELLED") {
+    if (booking.removedAt || booking.bookingStatus === "CANCELLED") {
       return NextResponse.json(
         { error: "This booking has been cancelled." },
         { status: 400 },

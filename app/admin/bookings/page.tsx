@@ -1,3 +1,4 @@
+import { RemoveBookingButton } from "@/components/admin/RemoveBookingButton";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { prisma } from "@/lib/prisma";
 import {
@@ -159,10 +160,11 @@ export default async function Bookings({
    */
 
   const where: {
+    removedAt: null;
     bookingStatus?: BookingStatus;
     paymentStatus?: PaymentStatus;
     OR?: Array<Record<string, unknown>>;
-  } = {};
+  } = { removedAt: null };
 
   if (
     status &&
@@ -236,10 +238,11 @@ export default async function Bookings({
     pendingBookings,
     paidBookings,
   ] = await Promise.all([
-    prisma.booking.count(),
+    prisma.booking.count({ where: { removedAt: null } }),
 
     prisma.booking.count({
       where: {
+        removedAt: null,
         bookingStatus: {
           in: [
             BookingStatus.CONFIRMED,
@@ -251,6 +254,7 @@ export default async function Bookings({
 
     prisma.booking.count({
       where: {
+        removedAt: null,
         bookingStatus:
           BookingStatus.PENDING,
       },
@@ -258,6 +262,7 @@ export default async function Bookings({
 
     prisma.booking.count({
       where: {
+        removedAt: null,
         paymentStatus:
           PaymentStatus.PAID,
       },
@@ -927,15 +932,7 @@ export default async function Bookings({
 
                           {/* ACTION */}
                           <td className="px-4 py-5">
-                            <a
-                              href={`/admin/bookings/${booking.id}`}
-                              className="flex h-8 w-8 items-center justify-center rounded-full text-black/25 transition hover:bg-black/[0.05] hover:text-black"
-                              aria-label={`Open booking ${booking.bookingReference}`}
-                            >
-                              <ChevronRight
-                                size={16}
-                              />
-                            </a>
+                            <RemoveBookingButton id={booking.id} reference={booking.bookingReference} guestName={booking.guestName} />
                           </td>
                         </tr>
                       );

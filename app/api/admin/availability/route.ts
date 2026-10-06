@@ -45,6 +45,7 @@ export async function POST(req: Request) {
     const existingBooking =
       await prisma.booking.findFirst({
         where: {
+          removedAt: null,
           apartmentId: apartment.id,
           bookingStatus: {
             in: ["CONFIRMED", "CHECKED_IN"],

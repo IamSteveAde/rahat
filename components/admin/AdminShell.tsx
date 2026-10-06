@@ -36,6 +36,11 @@ const nav: AdminNavItem[] = [
     icon: ClipboardList,
   },
   {
+    label: "Removed bookings",
+    href: "/admin/removed-bookings",
+    icon: ClipboardList,
+  },
+  {
     label: "Calendar",
     href: "/admin/calendar",
     icon: CalendarDays,

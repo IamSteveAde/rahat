@@ -21,7 +21,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { calculatePriceFromValues } from "@/lib/pricing";
-import { CAUTION_REFUND_NOTE, SERVICE_RATE, TAX_RATE } from "@/lib/payment-policy";
+import { CAUTION_ARRIVAL_NOTE, SERVICE_RATE, TAX_RATE } from "@/lib/payment-policy";
 
 type Apartment = {
   id: string;
@@ -686,7 +686,6 @@ export default function ApartmentsPage() {
                       [`Accommodation (${selectedNights} ${selectedNights === 1 ? "night" : "nights"})`, selectedPrice.subtotal],
                       [`Service charge (${SERVICE_RATE * 100}%)`, selectedPrice.serviceFee],
                       [`Tax (${TAX_RATE * 100}%)`, selectedPrice.taxes],
-                      ["Refundable caution fee", selectedPrice.cautionFee],
                     ].map(([label, amount]) => (
                       <div key={label} className="flex justify-between gap-4">
                         <dt className="text-white/65">{label}</dt>
@@ -698,7 +697,7 @@ export default function ApartmentsPage() {
                       <dd>{formatNaira(selectedPrice.total)}</dd>
                     </div>
                   </dl>
-                  <p className="mt-3 text-[11px] leading-5 text-white/60">{CAUTION_REFUND_NOTE}</p>
+                  <p className="mt-3 text-[11px] leading-5 text-white/60">{CAUTION_ARRIVAL_NOTE}</p>
                   <fieldset disabled={submitting} className="mt-5 border-t border-white/15 pt-4">
                     <legend className="px-1 text-xs font-semibold">Payment status · Paid only</legend>
                     <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#c9a96a] bg-[#c9a96a]/10 p-3 focus-within:ring-2 focus-within:ring-[#c9a96a]">

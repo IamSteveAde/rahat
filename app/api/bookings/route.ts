@@ -131,6 +131,7 @@ export async function GET() {
     const bookings =
       await prisma.booking.findMany({
         where: {
+          removedAt: null,
           guestAccessTokenHash: tokenHash,
         },
 

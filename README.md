@@ -27,13 +27,13 @@ All new guest and admin bookings use the same server pricing engine:
 - Tax: 7.5% of the accommodation subtotal.
 - Service charge: 2.5% of the accommodation subtotal.
 - No cleaning fee is charged on new bookings.
-- Caution fee: ₦100,000 once per booking, included in the payment total.
+- Caution fee: payable upon arrival — ₦150,000 for 2 bedrooms or ₦100,000 for 1 bedroom; excluded from the booking payment total.
 
 The availability response supplies a quote using the database nightly rate. Checkout checks the reviewed total against a fresh server calculation and asks the guest to review again if pricing has changed.
 
-Percentage fees round to the nearest whole naira. Paystack receives the stored total converted to kobo. A three-night one-bedroom stay at ₦200,000/night costs ₦760,000 (₦600,000 accommodation + ₦45,000 tax + ₦15,000 service + ₦100,000 caution fee).
+Percentage fees round to the nearest whole naira. Paystack receives the stored total converted to kobo. A three-night one-bedroom stay at ₦200,000/night costs ₦660,000 (₦600,000 accommodation + ₦45,000 tax + ₦15,000 service).
 
-The caution fee is refundable after checkout and inspection, subject to itemised deductions for damage, missing items, unpaid charges or breaches of house rules. The note appears before payment, on the confirmation page and in both receipts. Refund handling remains an operational process; this change does not automatically refund the deposit.
+The caution fee is refundable after checkout and inspection, subject to itemised deductions for damage, missing items, unpaid charges or breaches of house rules. The arrival-payment note appears before payment, in admin booking, on the confirmation page and in both receipts. Refund handling remains an operational process; this change does not automatically refund the deposit.
 
 Existing bookings keep their stored amounts. The new caution-fee column defaults to zero for historical bookings; receipts reflect the amounts actually paid.
 
@@ -86,3 +86,14 @@ If Prisma cannot connect, copy the complete connection strings from your project
 A reachable port followed by `FATAL: (ENOTFOUND) tenant/user ... not found` means the pooler cannot map that host/username pair to the project. Compare both values with the dashboard before changing a password. See [Supabase's troubleshooting guide](https://supabase.com/docs/guides/troubleshooting/tenant-or-user-not-found). Ensure the intended project is active, update `.env` (or the hosting environment), and restart Next.js. Do not paste database passwords into chat or logs.
 
 Connection failures return a guest-safe service error instead of claiming the apartment is unavailable. No demo availability or payment success is substituted when PostgreSQL is unreachable.
+
+## Removed bookings
+
+Admins can remove a booking from the Bookings table after typing its exact reference. Removed bookings retain guest and payment records and appear under Removed bookings with a Lagos/WAT timestamp, search and pagination. Removed reservations do not block availability; removing one does not issue a refund.
+
+Before running this version against an existing database, apply the additive update:
+
+```sh
+npx prisma db execute --file prisma/db-updates/20261006_removed_bookings.sql --schema prisma/schema.prisma
+npx prisma generate
+```

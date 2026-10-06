@@ -326,6 +326,7 @@ export async function confirmBookingPayment(
         payment.amount !== booking.total) {
       throw new Error("Payment amount, currency or reference could not be verified.");
     }
+    if (booking.removedAt) throw new Error("This booking has been removed. Contact Rahat with your payment reference.");
     if (payment.status === PaymentStatus.PAID && booking.paymentStatus === PaymentStatus.PAID) {
       await queueBookingReceipts(tx, booking.id);
       return booking.id;
@@ -395,6 +396,7 @@ export async function getBooking(
 ) {
   return prisma.booking.findFirst({
     where: {
+      removedAt: null,
       OR: [
         {
           id: idOrReference,

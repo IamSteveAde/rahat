@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     }
 
     if (
-      booking.bookingStatus ===
+      booking.removedAt || booking.bookingStatus ===
       "CANCELLED"
     ) {
       return NextResponse.json(

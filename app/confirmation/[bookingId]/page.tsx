@@ -1,6 +1,6 @@
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
 import { siteImages } from "@/lib/site-images";
-import { CAUTION_REFUND_NOTE } from "@/lib/payment-policy";
+import { CAUTION_ARRIVAL_NOTE } from "@/lib/payment-policy";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -659,10 +659,7 @@ export default async function Confirmation({
                     </div>
                   )}
 
-                  {booking.cautionFee > 0 && (<>
-                    <div className="flex items-center justify-between gap-5"><span className="text-white/40">Refundable caution fee</span><span>{formatNaira(booking.cautionFee)}</span></div>
-                    <p className="text-xs leading-relaxed text-white/50">{CAUTION_REFUND_NOTE}</p>
-                  </>)}
+                  <p className="text-xs leading-relaxed text-white/50">{CAUTION_ARRIVAL_NOTE}</p>
                   {latestPayment?.paidAt && (<p className="text-xs text-white/50">Paid: {new Date(latestPayment.paidAt).toLocaleString("en-NG", { timeZone: "Africa/Lagos", dateStyle: "long", timeStyle: "short" })} WAT</p>)}
                   {booking.discount > 0 && (
                     <div className="flex items-center justify-between gap-5">

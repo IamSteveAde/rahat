@@ -105,6 +105,7 @@ export default async function Dashboard() {
       status: true,
       bookings: {
         where: {
+          removedAt: null,
           bookingStatus: {
             in: [
               BookingStatus.CONFIRMED,
@@ -135,6 +136,7 @@ export default async function Dashboard() {
    * Recent actual bookings.
    */
   const recentBookings = await prisma.booking.findMany({
+    where: { removedAt: null },
     orderBy: {
       createdAt: "desc",
     },
@@ -203,6 +205,7 @@ export default async function Dashboard() {
   const todayCheckIns =
     await prisma.booking.count({
       where: {
+        removedAt: null,
         checkIn: {
           gte: todayStart,
           lte: todayEnd,
@@ -222,6 +225,7 @@ export default async function Dashboard() {
   const todayCheckOuts =
     await prisma.booking.count({
       where: {
+        removedAt: null,
         checkOut: {
           gte: todayStart,
           lte: todayEnd,
@@ -242,6 +246,7 @@ export default async function Dashboard() {
   const upcomingBookings =
     await prisma.booking.count({
       where: {
+        removedAt: null,
         checkIn: {
           gte: todayStart,
         },

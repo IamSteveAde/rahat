@@ -113,6 +113,7 @@ export async function GET(req: Request) {
       await Promise.all([
         prisma.booking.findFirst({
           where: {
+          removedAt: null,
             apartmentId: databaseApartment.id,
             checkIn: { lt: end },
             checkOut: { gt: start },

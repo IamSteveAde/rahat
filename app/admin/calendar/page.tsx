@@ -75,6 +75,7 @@ export default async function Calendar() {
 
         bookings: {
           where: {
+            removedAt: null,
             checkIn: {
               lt: monthEnd,
             },

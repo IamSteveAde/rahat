@@ -17,10 +17,11 @@ const booking = {
 };
 const payment = { id: "payment-1", bookingId: booking.id, reference: "PAY-TEST", amount: price.total, currency: "NGN", status: "PAID", provider: "PAYSTACK", paidAt: new Date("2026-10-01T10:30:00Z") };
 
-test("pricing applies both percentages on accommodation, omits cleaning and adds one deposit", () => {
-  assert.deepEqual(price, { nights: 3, nightlyRate: 200000, subtotal: 600000, cleaningFee: 0, serviceFee: 15000, taxes: 45000, cautionFee: 100000, discount: 0, total: 760000 });
+test("pricing applies both percentages on accommodation, excludes cleaning and the arrival caution fee", () => {
+  assert.deepEqual(price, { nights: 3, nightlyRate: 200000, subtotal: 600000, cleaningFee: 0, serviceFee: 15000, taxes: 45000, cautionFee: 0, discount: 0, total: 660000 });
   const twoBedroom = calculatePriceFromValues(400000, 2, "2026-10-05", "2026-10-06");
-  assert.equal(twoBedroom.total, 540000);
+  assert.equal(twoBedroom.total, 440000);
+  assert.equal(twoBedroom.cautionFee, 0);
   const rounded = calculatePriceFromValues(200001, 1, "2026-10-05", "2026-10-06");
   assert.equal(rounded.serviceFee, 5000);
   assert.equal(rounded.taxes, 15000);
@@ -31,9 +32,16 @@ test("receipts escape guest input and include references, amounts and Lagos paym
   const receipt = buildReceipt(booking as any, payment as any, false);
   assert.ok(!receipt.html.includes('<script>'));
   assert.ok(!receipt.text.includes("Cleaning fee"));
+  for (const admin of [false, true]) {
+    const arrivalReceipt = buildReceipt(booking as any, payment as any, admin);
+    assert.ok(!arrivalReceipt.text.includes("Refundable caution fee:"));
+    assert.ok(arrivalReceipt.text.includes("payable upon arrival"));
+    assert.ok(arrivalReceipt.html.includes("₦150,000"));
+    assert.ok(arrivalReceipt.html.includes("₦100,000"));
+  }
   assert.ok(buildReceipt({ ...booking, cleaningFee: 30000 } as any, payment as any, false).text.includes("Cleaning fee"));
   assert.ok(receipt.html.includes('&lt;script&gt;'));
-  for (const expected of ["RHT-TEST", "PAY-TEST", "11:30:00", "WAT", "760,000.00", "100,000.00", "refundable after check-out"]) assert.ok(receipt.text.includes(expected), expected);
+  for (const expected of ["RHT-TEST", "PAY-TEST", "11:30:00", "WAT", "660,000.00", "₦100,000", "₦150,000", "payable upon arrival"]) assert.ok(receipt.text.includes(expected), expected);
   assert.throws(() => buildReceipt(booking as any, { ...payment, status: "PENDING" } as any, false));
 });
 
@@ -138,6 +146,13 @@ test("receipt queue, dispatch retries and verified confirmation", async (t) => {
           await assert.rejects(confirmBookingPayment(payment.reference, { ...gateway, ...change }), /verified/);
         }
         assert.equal(writes.filter((value) => value !== "lock").length, 0);
+      });
+      await t.test("a delayed payment callback cannot reactivate a removed booking", async () => {
+        currentBooking.removedAt = new Date();
+        await assert.rejects(confirmBookingPayment(payment.reference, gateway), /removed/);
+        assert.equal(currentBooking.paymentStatus, "PENDING");
+        assert.equal(writes.filter((value) => value !== "lock").length, 0);
+        delete currentBooking.removedAt;
       });
       await t.test("confirms once, preserves gateway timestamp, and safely handles duplicate callbacks", async () => {
         await confirmBookingPayment(payment.reference, gateway);

@@ -33,7 +33,7 @@ import {
 
 import { calculatePrice, type PriceBreakdown } from "@/lib/pricing";
 import { validateBooking } from "@/lib/booking-validation";
-import { CAUTION_REFUND_NOTE } from "@/lib/payment-policy";
+import { CAUTION_ARRIVAL_NOTE } from "@/lib/payment-policy";
 
 type Step = 1 | 2 | 3;
 
@@ -1646,8 +1646,7 @@ export function BookingFlow() {
                         </span>
                       </div>
                       <div className="flex justify-between gap-5"><span className="text-white/45">Tax (7.5%)</span><span>{formatNaira(price.taxes)}</span></div>
-                      <div className="flex justify-between gap-5"><span className="text-white/45">Refundable caution fee</span><span>{formatNaira(price.cautionFee)}</span></div>
-                      <p className="text-xs leading-relaxed text-white/50">Tax and service charge are calculated on the accommodation subtotal. {CAUTION_REFUND_NOTE}</p>
+                      <p className="text-xs leading-relaxed text-white/50">Tax and service charge are calculated on the accommodation subtotal. {CAUTION_ARRIVAL_NOTE}</p>
                     </>
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-4">

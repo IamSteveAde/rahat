@@ -110,6 +110,7 @@ export async function GET(req: Request) {
        */
       prisma.booking.findMany({
         where: {
+          removedAt: null,
           apartmentId: apartment.id,
 
           checkIn: {

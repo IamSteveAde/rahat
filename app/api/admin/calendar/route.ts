@@ -132,6 +132,7 @@ export async function GET(
 
           bookings: {
             where: {
+            removedAt: null,
               checkIn: {
                 lt: monthEnd,
               },

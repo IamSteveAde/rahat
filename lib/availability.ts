@@ -82,6 +82,7 @@ export async function isApartmentAvailable(
 
     tx.booking.findMany({
       where: {
+        removedAt: null,
         apartmentId,
 
         /*

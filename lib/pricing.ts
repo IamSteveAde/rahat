@@ -1,5 +1,5 @@
 import { getApartment } from "./data";
-import { CAUTION_FEE, SERVICE_RATE, TAX_RATE } from "./payment-policy";
+import { SERVICE_RATE, TAX_RATE } from "./payment-policy";
 
 export type PriceBreakdown = {
   nights: number;
@@ -67,15 +67,14 @@ export function calculatePriceFromValues(
   );
 
   const taxes = Math.round(subtotal * TAX_RATE);
-  const cautionFee = CAUTION_FEE;
+  const cautionFee = 0;
   const discount = 0;
 
   const total =
     subtotal +
     cleaningFee +
     serviceFee +
-    taxes +
-    cautionFee -
+    taxes -
     discount;
 
   return {
