@@ -31,7 +31,7 @@ All new guest and admin bookings use the same server pricing engine:
 
 The availability response supplies a quote using the database nightly rate. Checkout checks the reviewed total against a fresh server calculation and asks the guest to review again if pricing has changed.
 
-Percentage fees round to the nearest whole naira. Paystack receives the stored total converted to kobo. A three-night one-bedroom stay at ₦200,000/night costs ₦660,000 (₦600,000 accommodation + ₦45,000 tax + ₦15,000 service).
+Percentage fees round to the nearest whole naira. Paystack receives the stored total converted to kobo. A three-night one-bedroom stay at ₦200,000/night costs ₦630,000 (₦600,000 accommodation + ₦45,000 tax + ₦15,000 service − ₦30,000 automatic stay discount).
 
 The caution fee is refundable after checkout and inspection, subject to itemised deductions for damage, missing items, unpaid charges or breaches of house rules. The arrival-payment note appears before payment, in admin booking, on the confirmation page and in both receipts. Refund handling remains an operational process; this change does not automatically refund the deposit.
 
@@ -110,3 +110,16 @@ npx prisma generate
 ## Revenue
 
 Dashboard revenue counts PAID payments attached to bookings with no removal timestamp. Removing a booking immediately excludes its payments from revenue, even before an admin confirms the payment return. The dashboard provides selectable monthly and yearly totals alongside all-time revenue. Period boundaries use Lagos/WAT and the payment's paidAt timestamp (createdAt for older paid records without paidAt). The customer directory also excludes removed bookings from paid revenue and customer paid totals.
+
+## Stay discounts and promo codes
+
+New guest and admin bookings automatically receive 5% off accommodation for 3–6 nights and 15% for 7–30 nights. Seven nights uses the 15% tier. Stays outside these ranges receive no automatic discount. Discount amounts round to the nearest naira; tax and service charges continue to use the original accommodation subtotal.
+
+Admin → Discounts & promo codes lets admins generate a code with an integer percentage from 1–100, optionally enter a custom code, copy it, and activate/deactivate it. Share codes with selected customers. Guests and admins can apply a code to a booking; the higher of the promo rate and automatic stay rate wins, without stacking. Codes are validated again server-side when saving the booking. Historical booking totals remain unchanged. Saved bookings and receipts include the applied percentage and promo code.
+
+Apply the schema additions before running this version:
+
+```sh
+npx prisma db execute --file prisma/db-updates/20261006_discounts.sql --schema prisma/schema.prisma
+npx prisma generate
+```

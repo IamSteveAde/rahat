@@ -20,9 +20,10 @@ export function buildReceipt(booking: Booking & { apartment: Apartment }, paymen
     ["Accommodation", money(booking.subtotal)],
     ...(booking.cleaningFee > 0 ? [["Cleaning fee", money(booking.cleaningFee)] as [string, string]] : []),
     [booking.cautionFee > 0 ? "Service charge (2.5%)" : "Service charge", money(booking.serviceFee)], [booking.cautionFee > 0 ? "Tax (7.5%)" : "Tax", money(booking.taxes)],
-    ...(booking.discount ? [["Discount", `-${money(booking.discount)}`] as [string, string]] : []),
+    ...(booking.discount ? [[booking.discountPercent > 0 ? `Discount (${booking.discountPercent}%)` : "Discount", `-${money(booking.discount)}`] as [string, string]] : []),
     ["Total paid (NGN)", money(payment.amount)],
   ];
+  if (booking.promoCode) rows.push(["Promo code", booking.promoCode]);
   if (admin && booking.guestPhone) rows.push(["Guest phone", booking.guestPhone]);
   if (admin && booking.arrivalTime) rows.push(["Arrival time", booking.arrivalTime]);
   if (admin && booking.specialRequests) rows.push(["Special requests", booking.specialRequests]);

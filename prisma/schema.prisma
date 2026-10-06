@@ -121,6 +121,8 @@ model Booking {
   serviceFee  Int
   taxes       Int @default(0)
   discount    Int @default(0)
+  discountPercent Int @default(0)
+  promoCode String?
   total       Int
 
   bookingStatus BookingStatus @default(PENDING)
@@ -229,4 +231,13 @@ model BookingEmail {
 
   @@unique([bookingId, kind])
   @@index([sentAt, nextAttemptAt])
+}
+
+model PromoCode {
+  id String @id @default(cuid())
+  code String @unique
+  percentage Int
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

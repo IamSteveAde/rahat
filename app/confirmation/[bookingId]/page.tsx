@@ -661,10 +661,11 @@ export default async function Confirmation({
 
                   <p className="text-xs leading-relaxed text-white/50">{CAUTION_ARRIVAL_NOTE}</p>
                   {latestPayment?.paidAt && (<p className="text-xs text-white/50">Paid: {new Date(latestPayment.paidAt).toLocaleString("en-NG", { timeZone: "Africa/Lagos", dateStyle: "long", timeStyle: "short" })} WAT</p>)}
+                  {booking.promoCode && <p className="text-xs text-white/50">Promo code: {booking.promoCode}</p>}
                   {booking.discount > 0 && (
                     <div className="flex items-center justify-between gap-5">
                       <span className="text-white/40">
-                        Discount
+                        Discount{booking.discountPercent > 0 ? ` (${booking.discountPercent}%)` : ""}
                       </span>
 
                       <span>

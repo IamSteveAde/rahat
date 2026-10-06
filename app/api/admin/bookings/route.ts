@@ -1,3 +1,4 @@
+import { resolvePromoCode } from "@/lib/promo-codes";
 import { NextResponse } from "next/server";
 import {
   BookingStatus,
@@ -220,12 +221,14 @@ export async function POST(req: Request) {
             );
           }
 
+          const promo = await resolvePromoCode(body.promoCode, tx);
           const price =
             calculatePriceFromValues(
               apartment.pricePerNight,
               apartment.bedrooms,
               checkIn,
               checkOut,
+              promo?.percentage ?? 0,
             );
 
           if (body.expectedTotal !== undefined && body.expectedTotal !== price.total) {
@@ -276,6 +279,8 @@ export async function POST(req: Request) {
 
                 discount:
                   price.discount,
+                discountPercent: price.discountPercent,
+                promoCode: promo?.code ?? null,
 
                 total:
                   price.total,

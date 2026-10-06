@@ -61,6 +61,11 @@ const nav: AdminNavItem[] = [
     icon: Users,
   },
   {
+    label: "Discounts & promo codes",
+    href: "/admin/discounts",
+    icon: ClipboardList,
+  },
+  {
     label: "Settings",
     href: "/admin/settings",
     icon: Settings,

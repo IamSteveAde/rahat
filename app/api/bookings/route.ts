@@ -11,6 +11,7 @@ const GUEST_BOOKING_COOKIE = "rahat_guest_booking";
 
 const createBookingSchema = z.object({
   apartmentId: z.string().min(1),
+  promoCode: z.string().trim().max(40).optional(),
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guests: z.number().int().min(1),

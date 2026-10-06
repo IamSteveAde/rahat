@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { PromoCodeField, type AppliedPromo } from "@/components/booking/PromoCodeField";
 import { calculatePriceFromValues } from "@/lib/pricing";
 import { CAUTION_ARRIVAL_NOTE, SERVICE_RATE, TAX_RATE } from "@/lib/payment-policy";
 
@@ -105,6 +106,8 @@ export default function ApartmentsPage() {
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promo, setPromo] = useState<AppliedPromo | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -174,6 +177,7 @@ export default function ApartmentsPage() {
   }
 
   async function createBooking() {
+    if (submitting || promoBusy) return;
     setError("");
     setSuccess("");
 
@@ -256,6 +260,7 @@ export default function ApartmentsPage() {
               specialRequests.trim(),
             paymentMode,
             expectedTotal: selectedPrice?.total,
+            promoCode: promo?.code,
           }),
         },
       );
@@ -312,6 +317,7 @@ export default function ApartmentsPage() {
           selectedApartment.bedrooms,
           checkIn,
           checkOut,
+          promo?.percentage ?? 0,
         )
       : null;
   const selectedNights = selectedPrice?.nights ?? 0;
@@ -692,12 +698,14 @@ export default function ApartmentsPage() {
                         <dd className="shrink-0 font-medium">{formatNaira(Number(amount))}</dd>
                       </div>
                     ))}
+                    {selectedPrice.discount > 0 && <div className="flex justify-between gap-4 text-[#c9a96a]"><dt>Discount ({selectedPrice.discountPercent}%)</dt><dd>−{formatNaira(selectedPrice.discount)}</dd></div>}
                     <div className="flex justify-between gap-4 border-t border-white/15 pt-4 text-base font-semibold">
                       <dt>Total amount</dt>
                       <dd>{formatNaira(selectedPrice.total)}</dd>
                     </div>
                   </dl>
-                  <p className="mt-3 text-[11px] leading-5 text-white/60">{CAUTION_ARRIVAL_NOTE}</p>
+                  <PromoCodeField apartment={selectedApartment.id} checkIn={checkIn} checkOut={checkOut} applied={promo} onApplied={(value) => { setPromo(value); setPaymentMode(null); }} onBusyChange={setPromoBusy} disabled={submitting} />
+                  <p className="mt-3 text-[11px] leading-5 text-white/60">Automatic stay discounts: 5% for 3–6 nights; 15% for 7–30 nights. {CAUTION_ARRIVAL_NOTE}</p>
                   <fieldset disabled={submitting} className="mt-5 border-t border-white/15 pt-4">
                     <legend className="px-1 text-xs font-semibold">Payment status · Paid only</legend>
                     <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#c9a96a] bg-[#c9a96a]/10 p-3 focus-within:ring-2 focus-within:ring-[#c9a96a]">
@@ -729,6 +737,7 @@ export default function ApartmentsPage() {
                     onClick={createBooking}
                     disabled={
                       submitting ||
+                      promoBusy ||
                       !paymentMode ||
                       !selectedApartment ||
                       selectedNights < 1

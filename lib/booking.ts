@@ -1,3 +1,4 @@
+import { resolvePromoCode } from "./promo-codes";
 import {
   BookingStatus,
   HoldStatus,
@@ -74,6 +75,7 @@ export async function createBooking(input: {
   checkOut: string;
   guests: number;
   expectedTotal?: number;
+  promoCode?: string;
   guestName: string;
   guestEmail: string;
   guestPhone?: string;
@@ -194,12 +196,14 @@ export async function createBooking(input: {
           );
         }
 
+        const promo = await resolvePromoCode(input.promoCode, tx);
         const price =
           calculatePriceFromValues(
             apartment.pricePerNight,
             apartment.bedrooms,
             input.checkIn,
             input.checkOut,
+            promo?.percentage ?? 0,
           );
 
         if (input.expectedTotal !== undefined && input.expectedTotal !== price.total) {
@@ -260,6 +264,8 @@ export async function createBooking(input: {
 
               discount:
                 price.discount,
+              discountPercent: price.discountPercent,
+              promoCode: promo?.code ?? null,
 
               total:
                 price.total,

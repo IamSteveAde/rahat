@@ -31,6 +31,7 @@ import {
   formatNaira,
 } from "@/lib/data";
 
+import { PromoCodeField, type AppliedPromo } from "@/components/booking/PromoCodeField";
 import { calculatePrice, type PriceBreakdown } from "@/lib/pricing";
 import { validateBooking } from "@/lib/booking-validation";
 import { CAUTION_ARRIVAL_NOTE } from "@/lib/payment-policy";
@@ -122,8 +123,10 @@ export function BookingFlow() {
   const [conflictType, setConflictType] =
     useState<string | null>(null);
 
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promo, setPromo] = useState<AppliedPromo | null>(null);
   const [quote, setQuote] = useState<{ key: string; price: PriceBreakdown } | null>(null);
-  const quoteKey = `${aSlug}:${checkIn}:${checkOut}:${guests}`;
+  const quoteKey = `${aSlug}:${checkIn}:${checkOut}:${guests}:${promo?.code ?? ""}`;
   const apt = getApartment(aSlug);
 
 
@@ -137,11 +140,11 @@ export function BookingFlow() {
     }
 
     try {
-      return calculatePrice(aSlug, checkIn, checkOut);
+      return calculatePrice(aSlug, checkIn, checkOut, promo?.percentage ?? 0);
     } catch {
       return null;
     }
-  }, [aSlug, checkIn, checkOut]);
+  }, [aSlug, checkIn, checkOut, promo]);
 
   const price = quote?.key === quoteKey ? quote.price : estimatedPrice;
   const nights = price?.nights ?? 0;
@@ -192,7 +195,7 @@ export function BookingFlow() {
             checkIn,
           )}&checkOut=${encodeURIComponent(
             checkOut,
-          )}&guests=${encodeURIComponent(String(guests))}`,
+          )}&guests=${encodeURIComponent(String(guests))}&promoCode=${encodeURIComponent(promo?.code ?? "")}`,
           {
             method: "GET",
             cache: "no-store",
@@ -210,7 +213,7 @@ export function BookingFlow() {
         }
 
         if (data?.available) {
-          if (data.price) setQuote({ key: `${aSlug}:${checkIn}:${checkOut}:${guests}`, price: data.price });
+          if (data.price) setQuote({ key: `${aSlug}:${checkIn}:${checkOut}:${guests}:${promo?.code ?? ""}`, price: data.price });
           setAvailabilityStatus("available");
 
           setAvailabilityMessage(
@@ -271,7 +274,7 @@ export function BookingFlow() {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [aSlug, checkIn, checkOut, guests]);
+  }, [aSlug, checkIn, checkOut, guests, promo]);
 
 
   /*
@@ -311,7 +314,7 @@ export function BookingFlow() {
    */
 
   async function next() {
-    if (submitting) {
+    if (submitting || promoBusy) {
       return;
     }
 
@@ -387,6 +390,10 @@ export function BookingFlow() {
      * The booking is only confirmed after Paystack
      * payment is successfully verified server-side.
      */
+    if (availabilityStatus !== "available" || quote?.key !== quoteKey) {
+      setError("Please wait for the updated price and availability before paying.");
+      return;
+    }
     const bookingError = validateBooking(
       aSlug,
       checkIn,
@@ -468,6 +475,7 @@ export function BookingFlow() {
             checkOut,
             guests,
             expectedTotal: price?.total,
+            promoCode: promo?.code,
             guestName: name.trim(),
             guestEmail: email.trim(),
             guestPhone: phone.trim(),
@@ -584,7 +592,7 @@ export function BookingFlow() {
    */
 
   function back() {
-    if (submitting) {
+    if (submitting || promoBusy) {
       return;
     }
 
@@ -1508,7 +1516,7 @@ export function BookingFlow() {
               <button
                 type="button"
                 onClick={back}
-                disabled={submitting}
+                disabled={submitting || promoBusy}
                 className="inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-black/40 transition hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowLeft size={13} />
@@ -1521,7 +1529,7 @@ export function BookingFlow() {
               <button
                 type="button"
                 onClick={next}
-                disabled={submitting}
+                disabled={submitting || promoBusy}
                 className="group inline-flex items-center gap-4 rounded-full bg-black px-6 py-3.5 text-[9px] uppercase tracking-[0.18em] text-white transition hover:bg-[#8A6E3F] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7"
               >
                 {submitting
@@ -1646,7 +1654,9 @@ export function BookingFlow() {
                         </span>
                       </div>
                       <div className="flex justify-between gap-5"><span className="text-white/45">Tax (7.5%)</span><span>{formatNaira(price.taxes)}</span></div>
-                      <p className="text-xs leading-relaxed text-white/50">Tax and service charge are calculated on the accommodation subtotal. {CAUTION_ARRIVAL_NOTE}</p>
+                      {price.discount > 0 && <div className="flex justify-between gap-5 text-[#c9a96a]"><span>Discount ({price.discountPercent}%)</span><span>−{formatNaira(price.discount)}</span></div>}
+                      <PromoCodeField apartment={aSlug} checkIn={checkIn} checkOut={checkOut} applied={promo} onApplied={setPromo} onBusyChange={setPromoBusy} disabled={submitting} />
+                      <p className="text-xs leading-relaxed text-white/50">Automatic stay discounts: 5% for 3–6 nights; 15% for 7–30 nights. Tax and service charge are calculated on the accommodation subtotal. {CAUTION_ARRIVAL_NOTE}</p>
                     </>
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-4">

@@ -1,3 +1,4 @@
+import { resolvePromoCode } from "@/lib/promo-codes";
 import { publicDatabaseError } from "@/lib/database-errors";
 import { NextResponse } from "next/server";
 
@@ -255,13 +256,15 @@ export async function GET(req: Request) {
       });
     }
 
+    const promo = await resolvePromoCode(url.searchParams.get("promoCode"));
+
     /*
      * Everything is available.
      */
     return NextResponse.json({
       apartment: databaseApartment.slug,
       available: true,
-      price: calculatePriceFromValues(databaseApartment.pricePerNight, databaseApartment.bedrooms, checkIn, checkOut),
+      price: calculatePriceFromValues(databaseApartment.pricePerNight, databaseApartment.bedrooms, checkIn, checkOut, promo?.percentage ?? 0),
       reason: null,
       unavailableFrom: null,
       unavailableTo: null,

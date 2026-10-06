@@ -18,7 +18,7 @@ const booking = {
 const payment = { id: "payment-1", bookingId: booking.id, reference: "PAY-TEST", amount: price.total, currency: "NGN", status: "PAID", provider: "PAYSTACK", paidAt: new Date("2026-10-01T10:30:00Z") };
 
 test("pricing applies both percentages on accommodation, excludes cleaning and the arrival caution fee", () => {
-  assert.deepEqual(price, { nights: 3, nightlyRate: 200000, subtotal: 600000, cleaningFee: 0, serviceFee: 15000, taxes: 45000, cautionFee: 0, discount: 0, total: 660000 });
+  assert.deepEqual(price, { nights: 3, nightlyRate: 200000, subtotal: 600000, cleaningFee: 0, serviceFee: 15000, taxes: 45000, cautionFee: 0, discount: 30000, discountPercent: 5, total: 630000 });
   const twoBedroom = calculatePriceFromValues(400000, 2, "2026-10-05", "2026-10-06");
   assert.equal(twoBedroom.total, 440000);
   assert.equal(twoBedroom.cautionFee, 0);
@@ -41,7 +41,7 @@ test("receipts escape guest input and include references, amounts and Lagos paym
   }
   assert.ok(buildReceipt({ ...booking, cleaningFee: 30000 } as any, payment as any, false).text.includes("Cleaning fee"));
   assert.ok(receipt.html.includes('&lt;script&gt;'));
-  for (const expected of ["RHT-TEST", "PAY-TEST", "11:30:00", "WAT", "660,000.00", "₦100,000", "₦150,000", "payable upon arrival"]) assert.ok(receipt.text.includes(expected), expected);
+  for (const expected of ["RHT-TEST", "PAY-TEST", "11:30:00", "WAT", "630,000.00", "Discount (5%)", "₦100,000", "₦150,000", "payable upon arrival"]) assert.ok(receipt.text.includes(expected), expected);
   assert.throws(() => buildReceipt(booking as any, { ...payment, status: "PENDING" } as any, false));
 });
 
