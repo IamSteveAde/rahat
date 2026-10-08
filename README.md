@@ -58,6 +58,14 @@ This transaction adds `Booking.cautionFee` and the `BookingEmail` outbox without
 
 Never expose Resend, Paystack or cron secrets through `NEXT_PUBLIC_*` variables. Sender and admin-recipient configuration is captured when each email is queued; changing it later affects new emails, not existing queued messages.
 
+### Register the Paystack webhook
+
+The handler is already implemented at `POST /api/payments/webhook`. For production, set `NEXT_PUBLIC_APP_URL="https://rahatapartment.com"`. Open Paystack **Settings → API Keys & Webhooks** and save `https://rahatapartment.com/api/payments/webhook` as the webhook URL for the mode you use (test or live). Use the same account and mode as the server's `PAYSTACK_SECRET_KEY`. A localhost URL cannot receive Paystack events.
+
+The webhook URL is separate from the checkout callback URL (`/api/payments/paystack/callback`). No extra webhook secret is required: Paystack signs requests with the account's secret key. The endpoint rejects invalid signatures, verifies successful charges with Paystack, and confirms bookings through the shared idempotent payment function. Processing failures return HTTP 500 so Paystack can retry.
+
+Validate with a test payment, then check Paystack's webhook delivery log for HTTP 200 and the booking for paid/confirmed status. Retry the same event and confirm no duplicate payment or receipt is created. See [Paystack's webhook documentation](https://paystack.com/docs/payments/webhooks/).
+
 ## Email and payment behaviour
 
 Successful Paystack callbacks, browser verification and signed Paystack webhooks share one confirmation function. It checks payment status, reference, amount and currency, then atomically confirms the payment/booking and queues two separate emails. An admin booking explicitly recorded as paid uses the same queue. Unpaid reservations do not receive a payment receipt.

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { contactLinks } from "@/lib/contact";
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
 import { siteImages } from "@/lib/site-images";
 import {
@@ -25,7 +26,7 @@ const contactOptions = [
     description:
       "Speak directly with the Rahat team about reservations, availability, directions or your stay.",
     action: "Start conversation",
-    href: "https://wa.me/2340000000000",
+    href: contactLinks.whatsapp,
   },
   {
     icon: Phone,
@@ -34,7 +35,7 @@ const contactOptions = [
     description:
       "Prefer a conversation? Our team can help you with your reservation and stay requirements.",
     action: "Call Rahat",
-    href: "tel:+2340000000000",
+    href: contactLinks.phone,
   },
   {
     icon: Mail,
@@ -43,7 +44,7 @@ const contactOptions = [
     description:
       "Send us your requirements and the Rahat team will get back to you.",
     action: "Send an email",
-    href: "mailto:hello@rahatluxuryapartment.com",
+    href: contactLinks.email,
   },
 ];
 

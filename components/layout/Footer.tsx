@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { contactLinks } from "@/lib/contact";
 import {
   ArrowUpRight,
   MapPin,
@@ -458,8 +459,10 @@ export function Footer() {
 
                 <div className="mt-7 flex flex-col gap-4">
 
-                  <Link
-                    href="/contact"
+                  <a
+                    href={contactLinks.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="
                       group
                       flex
@@ -496,10 +499,10 @@ export function Footer() {
 
                     WhatsApp concierge
 
-                  </Link>
+                  </a>
 
-                  <Link
-                    href="/contact"
+                  <a
+                    href={contactLinks.phone}
                     className="
                       group
                       flex
@@ -536,10 +539,10 @@ export function Footer() {
 
                     Speak with us
 
-                  </Link>
+                  </a>
 
-                  <Link
-                    href="/contact"
+                  <a
+                    href={contactLinks.email}
                     className="
                       group
                       flex
@@ -576,7 +579,7 @@ export function Footer() {
 
                     Send an enquiry
 
-                  </Link>
+                  </a>
 
                 </div>
 

@@ -2,6 +2,7 @@ import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartment
 import { siteImages } from "@/lib/site-images";
 import { CAUTION_ARRIVAL_NOTE } from "@/lib/payment-policy";
 import Link from "next/link";
+import { contactLinks } from "@/lib/contact";
 import {
   ArrowRight,
   Check,
@@ -761,7 +762,7 @@ export default async function Confirmation({
             </div>
 
             <a
-              href="tel:+2340000000000"
+              href={contactLinks.phone}
               className="mt-4 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.17em] text-black/40 transition hover:text-black"
             >
               <Phone size={12} />
