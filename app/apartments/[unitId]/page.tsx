@@ -503,7 +503,10 @@ export default function Apartment({
 <section className="relative z-20 overflow-hidden bg-black">
   <div className="relative h-[58svh] min-h-[460px] max-h-[760px] sm:h-[62svh]">
     <ResponsiveApartmentImage
-      image={apartmentBackgrounds[a.slug]}
+      image={apartmentBackgrounds[a.slug] ?? {
+        desktop: galleryImages[0],
+        mobile: galleryImages[0],
+      }}
       alt="Rahat Luxury Apartment atmosphere"
       className="absolute inset-0 h-full w-full object-cover object-center"
     />

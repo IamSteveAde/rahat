@@ -154,6 +154,7 @@ export async function createBooking(input: {
               capacity: true,
               status: true,
               pricePerNight: true,
+              slug: true,
               bedrooms: true,
             },
           });
@@ -204,6 +205,7 @@ export async function createBooking(input: {
             input.checkIn,
             input.checkOut,
             promo?.percentage ?? 0,
+            apartment.slug,
           );
 
         if (input.expectedTotal !== undefined && input.expectedTotal !== price.total) {

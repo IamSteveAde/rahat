@@ -264,7 +264,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       apartment: databaseApartment.slug,
       available: true,
-      price: calculatePriceFromValues(databaseApartment.pricePerNight, databaseApartment.bedrooms, checkIn, checkOut, promo?.percentage ?? 0),
+      price: calculatePriceFromValues(databaseApartment.pricePerNight, databaseApartment.bedrooms, checkIn, checkOut, promo?.percentage ?? 0, databaseApartment.slug),
       reason: null,
       unavailableFrom: null,
       unavailableTo: null,

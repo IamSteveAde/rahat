@@ -170,6 +170,7 @@ export async function POST(req: Request) {
                 capacity: true,
                 status: true,
                 pricePerNight: true,
+              slug: true,
                 bedrooms: true,
               },
             });
@@ -229,6 +230,7 @@ export async function POST(req: Request) {
               checkIn,
               checkOut,
               promo?.percentage ?? 0,
+            apartment.slug,
             );
 
           if (body.expectedTotal !== undefined && body.expectedTotal !== price.total) {

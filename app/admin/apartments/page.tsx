@@ -26,6 +26,7 @@ import { CAUTION_ARRIVAL_NOTE, SERVICE_RATE, TAX_RATE } from "@/lib/payment-poli
 
 type Apartment = {
   id: string;
+  slug: string;
   name: string;
   type: string;
   bedrooms: number;
@@ -318,6 +319,7 @@ export default function ApartmentsPage() {
           checkIn,
           checkOut,
           promo?.percentage ?? 0,
+          selectedApartment.slug,
         )
       : null;
   const selectedNights = selectedPrice?.nights ?? 0;

@@ -11,9 +11,9 @@ export async function POST(req: Request) {
     assertDateRange(body.checkIn, body.checkOut);
     const promo = await resolvePromoCode(body.promoCode);
     if (!promo) throw new Error("Enter a promo code.");
-    const apartment = await prisma.apartment.findFirst({ where: { OR: [{ id: body.apartment }, { slug: body.apartment }] }, select: { pricePerNight: true, bedrooms: true } });
+    const apartment = await prisma.apartment.findFirst({ where: { OR: [{ id: body.apartment }, { slug: body.apartment }] }, select: { pricePerNight: true, bedrooms: true, slug: true } });
     if (!apartment) throw new Error("Apartment not found.");
-    const price = calculatePriceFromValues(apartment.pricePerNight, apartment.bedrooms, body.checkIn, body.checkOut, promo.percentage);
+    const price = calculatePriceFromValues(apartment.pricePerNight, apartment.bedrooms, body.checkIn, body.checkOut, promo.percentage, apartment.slug);
     return NextResponse.json({ code: promo.code, percentage: promo.percentage, price });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not apply promo code.";

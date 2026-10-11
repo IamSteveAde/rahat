@@ -131,3 +131,9 @@ Apply the schema additions before running this version:
 npx prisma db execute --file prisma/db-updates/20261006_discounts.sql --schema prisma/schema.prisma
 npx prisma generate
 ```
+
+## ₦500 payment demo
+
+Run `npm run prisma:payment-demo` to create or update only the payment demo apartment in the configured database. Open `/booking?apartment=payment-demo`, select one guest and a one-night stay, and confirm the checkout total is ₦500. This listing provides no accommodation; it has no additional fees or discounts. Longer stays cost ₦500 per night.
+
+Deploy the updated application before testing on the public site. Paystack test keys simulate payments; use the deployed site's live Paystack key for an actual charge. After paying, verify the booking is paid/confirmed and a matching transaction appears in Paystack.
