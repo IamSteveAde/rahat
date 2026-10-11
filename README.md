@@ -132,10 +132,6 @@ npx prisma db execute --file prisma/db-updates/20261006_discounts.sql --schema p
 npx prisma generate
 ```
 
-## ₦500 payment demo
-
-Run `npm run prisma:payment-demo` to create or update only the payment demo apartment in the configured database. Open `/booking?apartment=payment-demo`, select one guest and a one-night stay, and confirm the one-night checkout total is ₦551: ₦500 accommodation, ₦13 service charge (2.5%) and ₦38 tax (7.5%), rounded to whole naira. This listing provides no accommodation. Standard booking discounts apply. Existing bookings keep their saved payment amounts.
-
-Deploy the updated application before testing on the public site. Paystack test keys simulate payments; use the deployed site's live Paystack key for an actual charge. After paying, verify the booking is paid/confirmed and a matching transaction appears in Paystack.
+## Paystack processing fees
 
 Paystack may add a separate processing fee when **Settings → Preferences → Pass fees to customers** is enabled. Payment verification compares Paystack's server-verified `requested_amount` with the saved booking amount and checks that the charged amount covers it; older responses without this field must match the booking amount exactly. The processing fee does not become accommodation revenue. Existing paid transactions can be retried through the callback with their original reference after deployment; this verifies the original charge and does not charge again.
