@@ -56,6 +56,7 @@ export async function verifyPaystackTransaction(reference: string) {
     status: string;
     reference: string;
     amount: number;
+    requested_amount?: number | null;
     currency: string;
     paid_at: string | null;
     customer: { email: string };

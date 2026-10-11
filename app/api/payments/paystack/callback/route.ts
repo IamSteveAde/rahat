@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { matchesPaystackAmount } from "@/lib/paystack-amount";
 import {
   confirmBookingPayment,
 } from "@/lib/booking";
@@ -99,11 +100,18 @@ export async function GET(
      * Our database amount is in naira.
      */
     if (
-      transaction.amount !==
-        payment.amount * 100 ||
+      !matchesPaystackAmount(transaction, payment.amount) ||
       transaction.currency !==
         "NGN"
     ) {
+      console.error("Paystack callback amount/currency mismatch", {
+        reference,
+        expectedAmountKobo: payment.amount * 100,
+        receivedAmountKobo: transaction.amount,
+        requestedAmountKobo: transaction.requested_amount,
+        expectedCurrency: "NGN",
+        receivedCurrency: transaction.currency,
+      });
       return NextResponse.redirect(
         new URL(
           `/booking?payment=failed`,

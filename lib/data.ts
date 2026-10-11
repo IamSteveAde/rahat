@@ -7,7 +7,7 @@ apartments.push({
   id: "payment-demo", slug: "payment-demo", name: "Payment Demo",
   type: "Payment Test Apartment", bedrooms: 1, bathrooms: 1, capacity: 1,
   pricePerNight: 500, status: "AVAILABLE",
-  description: "Demo apartment for testing payment checkout only. No accommodation is provided. A one-night booking costs exactly ₦500, with no additional fees or discounts.",
+  description: "Demo apartment for testing payment checkout only. No accommodation is provided. The nightly rate is ₦500. Standard service charge, tax and booking discounts apply.",
   images: ["/images/gallery/r1.jpeg", "/images/gallery/r2.jpeg"],
   amenities: ["Payment testing only", "No accommodation provided"],
 });

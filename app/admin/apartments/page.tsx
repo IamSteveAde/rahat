@@ -319,7 +319,6 @@ export default function ApartmentsPage() {
           checkIn,
           checkOut,
           promo?.percentage ?? 0,
-          selectedApartment.slug,
         )
       : null;
   const selectedNights = selectedPrice?.nights ?? 0;

@@ -142,7 +142,7 @@ test("receipt queue, dispatch retries and verified confirmation", async (t) => {
         await assert.rejects(createBooking({ apartmentId: apartment.id, checkIn: "2099-10-05", checkOut: "2099-10-08", guests: 2, guestName: "Guest", guestEmail: "guest@example.com", expectedTotal: 1 }), /price has changed/);
       });
       await t.test("rejects amount, currency, status and reference mismatches without marking paid", async () => {
-        for (const change of [{ amount: 1 }, { currency: "USD" }, { status: "pending" }, { reference: "other" }]) {
+        for (const change of [{ amount: 1 }, { requested_amount: 1 }, { currency: "USD" }, { status: "pending" }, { reference: "other" }]) {
           await assert.rejects(confirmBookingPayment(payment.reference, { ...gateway, ...change }), /verified/);
         }
         assert.equal(writes.filter((value) => value !== "lock").length, 0);
@@ -154,12 +154,13 @@ test("receipt queue, dispatch retries and verified confirmation", async (t) => {
         assert.equal(writes.filter((value) => value !== "lock").length, 0);
         delete currentBooking.removedAt;
       });
-      await t.test("confirms once, preserves gateway timestamp, and safely handles duplicate callbacks", async () => {
-        await confirmBookingPayment(payment.reference, gateway);
+      await t.test("confirms customer-paid gateway fees once, preserves timestamp, and handles duplicates", async () => {
+        const withCustomerFees = { ...gateway, requested_amount: gateway.amount, amount: gateway.amount + 762 };
+        await confirmBookingPayment(payment.reference, withCustomerFees);
         assert.equal(currentBooking.paymentStatus, "PAID");
         assert.equal(currentPayment.paidAt.toISOString(), gateway.paid_at.replace("Z", ".000Z"));
         assert.equal(writes.filter((value) => value === "payment").length, 1);
-        await confirmBookingPayment(payment.reference, gateway);
+        await confirmBookingPayment(payment.reference, withCustomerFees);
         assert.equal(writes.filter((value) => value === "payment").length, 1);
       });
       await t.test("a late failed event cannot downgrade a paid booking", async () => {

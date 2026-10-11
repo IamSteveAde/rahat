@@ -1656,7 +1656,7 @@ export function BookingFlow() {
                       <div className="flex justify-between gap-5"><span className="text-white/45">Tax (7.5%)</span><span>{formatNaira(price.taxes)}</span></div>
                       {price.discount > 0 && <div className="flex justify-between gap-5 text-[#c9a96a]"><span>Discount ({price.discountPercent}%)</span><span>−{formatNaira(price.discount)}</span></div>}
                       <PromoCodeField apartment={aSlug} checkIn={checkIn} checkOut={checkOut} applied={promo} onApplied={setPromo} onBusyChange={setPromoBusy} disabled={submitting} />
-                      <p className="text-xs leading-relaxed text-white/50">{apt.slug === "payment-demo" ? "Payment testing only. No accommodation is provided. ₦500 per night, with no additional fees or discounts. Select one night for a ₦500 payment." : <>Automatic stay discounts: 5% for 3–6 nights; 15% for 7–30 nights. Tax and service charge are calculated on the accommodation subtotal. {CAUTION_ARRIVAL_NOTE}</>}</p>
+                      <p className="text-xs leading-relaxed text-white/50">{apt.slug === "payment-demo" ? "Payment testing only. No accommodation is provided. ₦500 per night plus the standard 2.5% service charge and 7.5% tax. Standard booking discounts apply." : <>Automatic stay discounts: 5% for 3–6 nights; 15% for 7–30 nights. Tax and service charge are calculated on the accommodation subtotal. {CAUTION_ARRIVAL_NOTE}</>}</p>
                     </>
                   ) : (
                     <div className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-4">

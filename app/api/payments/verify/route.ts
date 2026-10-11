@@ -3,6 +3,7 @@ import { z } from "zod";
 import { confirmBookingPayment } from "@/lib/booking";
 import { prisma } from "@/lib/prisma";
 import { verifyPaystackTransaction } from "@/lib/paystack";
+import { matchesPaystackAmount } from "@/lib/paystack-amount";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -21,7 +22,15 @@ export async function POST(req: Request) {
     const payment = await prisma.payment.findUnique({ where: { reference } });
     if (!payment) return NextResponse.json({ error: "Payment reference not found." }, { status: 404 });
 
-    if (transaction.amount !== payment.amount * 100 || transaction.currency !== "NGN") {
+    if (!matchesPaystackAmount(transaction, payment.amount) || transaction.currency !== "NGN") {
+      console.error("Paystack verification amount/currency mismatch", {
+        reference,
+        expectedAmountKobo: payment.amount * 100,
+        receivedAmountKobo: transaction.amount,
+        requestedAmountKobo: transaction.requested_amount,
+        expectedCurrency: "NGN",
+        receivedCurrency: transaction.currency,
+      });
       return NextResponse.json({ error: "Payment amount could not be verified." }, { status: 400 });
     }
 

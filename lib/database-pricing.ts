@@ -13,7 +13,6 @@ export async function calculateDatabasePrice(
       },
       select: {
         pricePerNight: true,
-        slug: true,
         bedrooms: true,
       },
     });
@@ -27,7 +26,5 @@ export async function calculateDatabasePrice(
     apartment.bedrooms,
     checkIn,
     checkOut,
-    0,
-    apartment.slug,
   );
 }

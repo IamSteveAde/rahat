@@ -54,7 +54,6 @@ export function calculatePriceFromValues(
   checkIn: string,
   checkOut: string,
   promoPercent = 0,
-  apartmentSlug?: string,
 ): PriceBreakdown {
   const nights = nightsBetween(
     checkIn,
@@ -63,20 +62,19 @@ export function calculatePriceFromValues(
 
   const subtotal = pricePerNight * nights;
 
-  const isPaymentDemo = apartmentSlug === "payment-demo";
   const cleaningFee = 0;
 
   const serviceFee = Math.round(
-    subtotal * (isPaymentDemo ? 0 : SERVICE_RATE),
+    subtotal * SERVICE_RATE,
   );
 
-  const taxes = Math.round(subtotal * (isPaymentDemo ? 0 : TAX_RATE));
+  const taxes = Math.round(subtotal * TAX_RATE);
   const cautionFee = 0;
   if (!Number.isInteger(promoPercent) || promoPercent < 0 || promoPercent > 100) {
     throw new Error("Invalid discount percentage.");
   }
   const stayPercent = nights >= 7 && nights <= 30 ? 15 : nights >= 3 && nights < 7 ? 5 : 0;
-  const discountPercent = isPaymentDemo ? 0 : Math.max(stayPercent, promoPercent);
+  const discountPercent = Math.max(stayPercent, promoPercent);
   const discount = Math.round(subtotal * discountPercent / 100);
 
   const total =
@@ -118,6 +116,5 @@ export function calculatePrice(
     checkIn,
     checkOut,
     promoPercent,
-    apartment.slug,
   );
 }

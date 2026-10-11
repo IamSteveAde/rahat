@@ -1,4 +1,5 @@
 import { resolvePromoCode } from "./promo-codes";
+import { matchesPaystackAmount } from "./paystack-amount";
 import {
   BookingStatus,
   HoldStatus,
@@ -154,7 +155,6 @@ export async function createBooking(input: {
               capacity: true,
               status: true,
               pricePerNight: true,
-              slug: true,
               bedrooms: true,
             },
           });
@@ -205,7 +205,6 @@ export async function createBooking(input: {
             input.checkIn,
             input.checkOut,
             promo?.percentage ?? 0,
-            apartment.slug,
           );
 
         if (input.expectedTotal !== undefined && input.expectedTotal !== price.total) {
@@ -320,7 +319,7 @@ export async function confirmBookingPayment(
   gatewayResponse: unknown,
 ) {
   const transaction = gatewayResponse as {
-    status?: string; reference?: string; amount?: number; currency?: string; paid_at?: string | null;
+    status?: string; reference?: string; amount?: number; requested_amount?: number | null; currency?: string; paid_at?: string | null;
   };
   const bookingId = await prisma.$transaction(async (tx) => {
     const initial = await tx.payment.findUniqueOrThrow({ where: { reference }, include: { booking: true } });
@@ -330,7 +329,7 @@ export async function confirmBookingPayment(
     const payment = await tx.payment.findUniqueOrThrow({ where: { reference }, include: { booking: true } });
     const booking = payment.booking;
     if (!transaction || transaction.status !== "success" || transaction.reference !== reference ||
-        transaction.amount !== payment.amount * 100 || transaction.currency !== payment.currency ||
+        !matchesPaystackAmount(transaction, payment.amount) || transaction.currency !== payment.currency ||
         payment.amount !== booking.total) {
       throw new Error("Payment amount, currency or reference could not be verified.");
     }
