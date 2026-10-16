@@ -1,5 +1,7 @@
 "use client";
 
+import { OptimizedImage } from "@/components/media/OptimizedImage";
+import { HomeVideo } from "@/components/media/HomeVideo";
 import Link from "next/link";
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
 import { siteImages } from "@/lib/site-images";
@@ -117,17 +119,7 @@ export default function HomePage() {
 
         <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
 
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster={siteImages["home-3"].desktop}
-            className="absolute inset-0 h-full w-full object-cover"
-            aria-hidden="true"
-          >
-            <source src="/images/IMG_8650.mp4" type="video/mp4" />
-          </video>
+          <HomeVideo poster={siteImages["home-3"].desktop} />
 
           {/* General overlay */}
           <div className="absolute inset-0 bg-black/20" />
@@ -884,7 +876,7 @@ export default function HomePage() {
                 bg-[#161513]
               "
             >
-              <img
+              <OptimizedImage
                 src={apartment.image}
                 alt={apartment.name}
                 className="

@@ -5,6 +5,7 @@
 
 "use client";
 
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import {
   useEffect,
   useMemo,
@@ -773,7 +774,7 @@ export function BookingFlow() {
         <div className="mt-10 overflow-hidden rounded-[1.5rem] border border-black/[0.07] bg-white sm:mt-14">
           <div className="grid lg:grid-cols-[190px_1fr_auto]">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#ddd9d0] lg:aspect-auto">
-              <img
+              <OptimizedImage
                 src="/images/gallery/r1.jpeg"
                 alt={apt.name}
                 className="h-full w-full object-cover"

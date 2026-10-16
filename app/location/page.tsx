@@ -51,7 +51,7 @@ export default function Location() {
       {/* HERO */}
       <section className="relative min-h-[92svh] overflow-hidden">
         <div className="absolute inset-0">
-          <ResponsiveApartmentImage
+          <ResponsiveApartmentImage loading="eager"
             image={siteImages["location-1"]}
             alt="Rahat Luxury Apartment surroundings"
             className="h-full w-full object-cover"

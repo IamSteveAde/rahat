@@ -1,5 +1,6 @@
 "use client";
 
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -166,7 +167,7 @@ export function Navbar() {
               items-center
             "
           >
-            <img
+            <OptimizedImage sizes="64px" loading="eager"
               src="/images/gallery/logo.png"
               alt="Rahat Luxury Apartment"
               className="

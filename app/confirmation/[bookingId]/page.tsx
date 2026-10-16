@@ -1,3 +1,4 @@
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
 import { siteImages } from "@/lib/site-images";
 import { CAUTION_ARRIVAL_NOTE } from "@/lib/payment-policy";
@@ -130,7 +131,7 @@ export default async function Confirmation({
 
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <ResponsiveApartmentImage
+          <ResponsiveApartmentImage loading="eager"
   image={siteImages["confirmation-hero"]}
   alt={apartment.name}
   className="h-full w-full object-cover opacity-40"
@@ -289,7 +290,7 @@ export default async function Confirmation({
 
             <section className="overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-black/[0.045]">
               <div className="relative h-[320px] overflow-hidden sm:h-[420px]">
-                <img
+                <OptimizedImage
                   src={primaryImage}
                   alt={apartment.name}
                   className="h-full w-full object-cover"

@@ -67,7 +67,7 @@ export default function ContactPage() {
       ========================================================= */}
       <section className="relative min-h-[78svh] overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <ResponsiveApartmentImage
+          <ResponsiveApartmentImage loading="eager"
             image={siteImages["contact-1"]}
             alt="Rahat Luxury Apartment"
             className="h-full w-full object-cover"

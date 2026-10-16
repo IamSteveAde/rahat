@@ -7,7 +7,7 @@ function BookingHero() {
   return (
     <section className="relative isolate overflow-hidden bg-black text-white">
       <div className="relative h-[48svh] min-h-[420px] max-h-[680px]">
-        <ResponsiveApartmentImage
+        <ResponsiveApartmentImage loading="eager"
           image={siteImages["booking-hero"]}
           alt="Rahat Luxury Apartment"
           className="absolute inset-0 h-full w-full object-cover"

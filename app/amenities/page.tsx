@@ -223,7 +223,7 @@ export default function Amenities() {
 
         <div className="absolute inset-0 overflow-hidden">
 
-          <ResponsiveApartmentImage image={siteImages["amenities-1"]} alt="Rahat apartment interior"
+          <ResponsiveApartmentImage loading="eager" image={siteImages["amenities-1"]} alt="Rahat apartment interior"
             className="
               absolute
               inset-0

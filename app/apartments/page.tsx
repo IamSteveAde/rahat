@@ -5,6 +5,7 @@
 
 "use client";
 
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
@@ -108,7 +109,7 @@ function ResidenceCard({
       >
         {/* IMAGE */}
         <div className="relative aspect-[4/3] overflow-hidden bg-[#ddd9d0] sm:aspect-[5/4]">
-          <img
+          <OptimizedImage
             src={image}
             alt={`${apartment.name} residence at Rahat`}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] group-hover:scale-[1.045]"
@@ -241,7 +242,7 @@ export default function Apartments() {
             }}
             className="absolute inset-0"
           >
-            <ResponsiveApartmentImage
+            <ResponsiveApartmentImage loading="eager"
               image={siteImages["apartments-1"]}
               alt="Rahat Luxury Apartment"
               className="h-full w-full object-cover object-center"

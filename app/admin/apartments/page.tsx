@@ -1,5 +1,6 @@
 "use client";
 
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import { useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -862,7 +863,7 @@ export default function ApartmentsPage() {
                         >
                           {/* IMAGE */}
                           <div className="relative aspect-[16/9] overflow-hidden bg-black/[0.04]">
-                            <img
+                            <OptimizedImage
                               src={image}
                               alt={
                                 apartment.images?.[0]

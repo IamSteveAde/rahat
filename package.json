@@ -12,7 +12,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "images:optimize": "python3 scripts/optimize-images.py",
+    "videos:optimize": "python3 scripts/optimize-videos.py"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

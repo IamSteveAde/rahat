@@ -135,3 +135,23 @@ npx prisma generate
 ## Paystack processing fees
 
 Paystack may add a separate processing fee when **Settings → Preferences → Pass fees to customers** is enabled. Payment verification compares Paystack's server-verified `requested_amount` with the saved booking amount and checks that the charged amount covers it; older responses without this field must match the booking amount exactly. The processing fee does not become accommodation revenue. Existing paid transactions can be retried through the callback with their original reference after deployment; this verifies the original charge and does not charge again.
+
+## Search engine metadata
+
+Public pages have unique server-rendered titles, descriptions, canonical URLs and Open Graph/Twitter images. Apartment metadata uses the apartment name and its first listing image from `lib/data.ts`. Local business, website, apartment and breadcrumb JSON-LD describe the actual accommodation without invented ratings or reviews.
+
+Set `NEXT_PUBLIC_SITE_URL` to the preferred HTTPS production origin before building (defaults to `https://rahatapartment.com`). This is separate from the payment callback URL so local development does not generate localhost canonicals. `/sitemap.xml` lists the public pages and apartment detail URLs; `/robots.txt` links to it. Admin, availability results, checkout, confirmation and guest booking pages carry `noindex, nofollow`.
+
+After deployment, verify the live domain in Google Search Console and submit `/sitemap.xml`. Search engines decide indexing, snippets and rankings; metadata alone does not guarantee placement.
+
+## Optimized images
+
+Photos and the logo are served from committed `public/optimized` WebP variants (up to 320, 640, 1280 and 1920 pixels wide). Responsive image components use browser `srcset` selection and lazy-load offscreen content. Apartment gallery thumbnails use a 112px display size. Originals remain available for existing links and social sharing metadata. Videos are unchanged.
+
+After adding/replacing a local image, run `npm run images:optimize` on macOS with `cwebp` installed. Commit the generated files and `lib/image-manifest.json`; production builds do not need the image tools. Unknown or external images fall back to their original URLs.
+
+## Optimized videos
+
+The homepage video autoplays muted and inline only while visible in the viewport. It pauses when scrolled out of view or when the tab is hidden, resumes when visible again, and defers its source until first visible. Apartment tours continue to use `preload="none"` and play on demand. Playback sources use committed MP4s under `public/optimized/images`; originals stay available at existing URLs.
+
+Run `npm run videos:optimize` after adding/changing MP4s (requires local `ffmpeg` and `ffprobe`). The script keeps aspect ratio and audio, caps dimensions at 720 × 1280 without upscaling, encodes H.264/yuv420p with AAC audio, and moves MP4 metadata to the front for progressive playback. Generated sizes are recorded in `lib/video-manifest.json`. Commit the outputs; production does not run the encoders. Videos remain hosted on Netlify, so user-initiated playback still consumes bandwidth.

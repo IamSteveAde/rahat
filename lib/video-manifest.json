@@ -1,0 +1,68 @@
+[
+  {
+    "source": "/images/IMG_8650.mp4",
+    "output": "/optimized/images/IMG_8650.mp4",
+    "originalBytes": 2077508,
+    "optimizedBytes": 1264210
+  },
+  {
+    "source": "/images/alexa/alexa.mp4",
+    "output": "/optimized/images/alexa/alexa.mp4",
+    "originalBytes": 11051798,
+    "optimizedBytes": 8013075
+  },
+  {
+    "source": "/images/caesar%20/caesar.mp4",
+    "output": "/optimized/images/caesar%20/caesar.mp4",
+    "originalBytes": 7746216,
+    "optimizedBytes": 6132982
+  },
+  {
+    "source": "/images/gallery/hero1.mp4",
+    "output": "/optimized/images/gallery/hero1.mp4",
+    "originalBytes": 20032008,
+    "optimizedBytes": 6369134
+  },
+  {
+    "source": "/images/irene/irene.mp4",
+    "output": "/optimized/images/irene/irene.mp4",
+    "originalBytes": 6105507,
+    "optimizedBytes": 4901463
+  },
+  {
+    "source": "/images/mafia/mafia.mp4",
+    "output": "/optimized/images/mafia/mafia.mp4",
+    "originalBytes": 10752826,
+    "optimizedBytes": 8818247
+  },
+  {
+    "source": "/images/monica/monica.mp4",
+    "output": "/optimized/images/monica/monica.mp4",
+    "originalBytes": 6150806,
+    "optimizedBytes": 4779637
+  },
+  {
+    "source": "/images/pablo/pablo.mp4",
+    "output": "/optimized/images/pablo/pablo.mp4",
+    "originalBytes": 8168123,
+    "optimizedBytes": 7092509
+  },
+  {
+    "source": "/images/ragnar/ragnar.mp4",
+    "output": "/optimized/images/ragnar/ragnar.mp4",
+    "originalBytes": 7908605,
+    "optimizedBytes": 5845826
+  },
+  {
+    "source": "/images/sunita/sunita.mp4",
+    "output": "/optimized/images/sunita/sunita.mp4",
+    "originalBytes": 6173233,
+    "optimizedBytes": 4847834
+  },
+  {
+    "source": "/images/theresa/theresa.mp4",
+    "output": "/optimized/images/theresa/theresa.mp4",
+    "originalBytes": 7768649,
+    "optimizedBytes": 4936056
+  }
+]

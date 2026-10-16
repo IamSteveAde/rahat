@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
+import { optimizedImage } from "@/lib/optimized-images";
 import { Play } from "lucide-react";
 
 export function ApartmentVideo({ src, poster, name }: { src: string; poster: string; name: string }) {
@@ -14,7 +15,7 @@ export function ApartmentVideo({ src, poster, name }: { src: string; poster: str
         controls
         playsInline
         preload="none"
-        poster={poster}
+        poster={optimizedImage(poster).src}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}

@@ -1,5 +1,6 @@
 "use client";
 
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
@@ -118,7 +119,7 @@ export default function Gallery() {
 
         <div className="absolute inset-0">
 
-          <ResponsiveApartmentImage image={siteImages["gallery-1"]} alt="Rahat apartment interior"
+          <ResponsiveApartmentImage loading="eager" image={siteImages["gallery-1"]} alt="Rahat apartment interior"
             className="
               absolute
               inset-0
@@ -604,7 +605,7 @@ export default function Gallery() {
 
                     {/* Image */}
 
-                    <img
+                    <OptimizedImage
                       src={image.src}
                       alt={image.title}
                       className="
@@ -1207,8 +1208,10 @@ export default function Gallery() {
               "
             >
 
-              <img
+              <OptimizedImage
                 src={currentImage.src}
+                sizes="100vw"
+                loading="eager"
                 alt={currentImage.title}
                 className="
                   max-h-full

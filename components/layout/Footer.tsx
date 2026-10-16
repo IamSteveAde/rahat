@@ -1,3 +1,4 @@
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import Link from "next/link";
 import { contactLinks } from "@/lib/contact";
 import {
@@ -277,7 +278,7 @@ export function Footer() {
                     hover:opacity-75
                   "
                 >
-                  <img
+                  <OptimizedImage sizes="64px" loading="eager"
                     src="/images/gallery/logo.png"
                     alt="Rahat Luxury Apartment"
                     className="

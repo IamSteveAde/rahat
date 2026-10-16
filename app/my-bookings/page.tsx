@@ -1,3 +1,4 @@
+import { OptimizedImage } from "@/components/media/OptimizedImage";
 import { ResponsiveApartmentImage } from "@/components/media/ResponsiveApartmentImage";
 import { siteImages } from "@/lib/site-images";
 import Link from "next/link";
@@ -180,7 +181,7 @@ let bookings: BookingWithDetails[] = [];
 
       <section className="relative overflow-hidden bg-black text-white">
         <div className="absolute inset-0">
-          <ResponsiveApartmentImage
+          <ResponsiveApartmentImage loading="eager"
             image={siteImages["my-bookings-hero"]}
             alt=""
             className="h-full w-full object-cover opacity-35"
@@ -297,7 +298,7 @@ let bookings: BookingWithDetails[] = [];
                         {/* Image */}
 
                         <div className="relative min-h-[280px] overflow-hidden bg-[#ddd8cd] lg:min-h-[100%]">
-                          <img
+                          <OptimizedImage
                             src={apartmentImage}
                             alt={
                               booking.apartment.name

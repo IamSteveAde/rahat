@@ -33,7 +33,7 @@ export default function Page() {
       {/* HERO */}
       <section className="relative min-h-[92svh] overflow-hidden">
         <div className="absolute inset-0">
-          <ResponsiveApartmentImage
+          <ResponsiveApartmentImage loading="eager"
             image={siteImages["about-1"]}
             alt="Rahat Luxury Apartment"
             className="h-full w-full object-cover"
