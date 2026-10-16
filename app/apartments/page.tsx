@@ -684,7 +684,7 @@ export default function Apartments() {
           <div className="mx-auto flex w-full max-w-[1440px] justify-between">
             <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.25em] text-white/45">
               <MapPin size={13} className="text-[#D5B270]" />
-              Ikota GRA, Lagos
+              IkotaGRA, Lagos
             </span>
 
             <span className="hidden font-mono text-[9px] tracking-[0.2em] text-white/35 sm:block">
